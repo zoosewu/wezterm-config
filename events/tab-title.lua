@@ -5,6 +5,7 @@
 local wezterm = require('wezterm')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
+local WinOverrides = require('utils.window-overrides')
 
 ---
 -- =======================================
@@ -209,9 +210,17 @@ end
 function Tab:set_info(event_opts, tab, max_width)
    local process_name = clean_process_name(tab.active_pane.foreground_process_name)
 
-   self.is_wsl = process_name:match('^wsl') ~= nil
+   -- WSL detection: prefer domain_name over process name (more reliable)
+   local domain_name = tab.active_pane.domain_name or ''
+   self.is_wsl = domain_name:lower():match('^wsl') ~= nil
+      or process_name:match('^wsl') ~= nil
+   -- Admin detection: support localized Windows titles
+   local pane_title = tab.active_pane.title
    self.is_admin = (
-      tab.active_pane.title:match('^Administrator: ') or tab.active_pane.title:match('(Admin)')
+      pane_title:match('^Administrator:%s') ~= nil
+      or pane_title:match('%([Aa]dmin%)') ~= nil
+      or pane_title:match('^系統管理員:') ~= nil
+      or pane_title:match('^管理员:') ~= nil
    ) ~= nil
    self.unseen_output = false
    self.unseen_output_count = 0
@@ -345,14 +354,22 @@ M.setup = function(opts)
    -- Event listener to manually update the tab name
    wezterm.on('tabs.toggle-tab-bar', function(window, _pane)
       local effective_config = window:effective_config()
-      window:set_config_overrides({
-         enable_tab_bar = not effective_config.enable_tab_bar,
-         background = effective_config.background,
-      })
+      WinOverrides.set(window, 'enable_tab_bar', not effective_config.enable_tab_bar)
    end)
 
    -- BUILTIN EVENT
-   wezterm.on('format-tab-title', function(tab, _tabs, _panes, _config, hover, max_width)
+   wezterm.on('format-tab-title', function(tab, tabs, _panes, _config, hover, max_width)
+      -- Cleanup stale tab_list entries to prevent memory leak
+      local current_ids = {}
+      for _, t in ipairs(tabs) do
+         current_ids[t.tab_id] = true
+      end
+      for id in pairs(tab_list) do
+         if not current_ids[id] then
+            tab_list[id] = nil
+         end
+      end
+
       if not tab_list[tab.tab_id] then
          tab_list[tab.tab_id] = Tab:new()
          tab_list[tab.tab_id]:set_info(valid_opts, tab, max_width)

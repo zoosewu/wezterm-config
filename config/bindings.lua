@@ -59,7 +59,18 @@ local keys = {
 
    -- tabs --
    -- tabs: spawn+close
-   { key = 't',          mods = mod.SUPER,     action = act.SpawnTab('DefaultDomain') },
+   {
+      key = 't',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, pane)
+         local cwd_uri = pane:get_current_working_dir()
+         local cwd = cwd_uri and cwd_uri.file_path or nil
+         window:perform_action(
+            act.SpawnCommandInNewTab({ domain = 'DefaultDomain', cwd = cwd }),
+            pane
+         )
+      end),
+   },
    { key = 't',          mods = mod.SUPER_REV, action = act.SpawnTab({ DomainName = 'wsl:ubuntu-fish' }) },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
@@ -75,6 +86,13 @@ local keys = {
 
    -- tab: hide tab-bar
    { key = '9',          mods = mod.SUPER,     action = act.EmitEvent('tabs.toggle-tab-bar'), },
+
+   -- session --
+   {
+      key = 's',
+      mods = mod.SUPER_REV,
+      action = act.EmitEvent('session.save'),
+   },
 
    -- window --
    -- window: spawn windows
@@ -162,17 +180,38 @@ local keys = {
       end)
    },
 
+   -- scratchpad pane toggle
+   {
+      key = '`',
+      mods = mod.SUPER_REV,
+      action = act.EmitEvent('scratchpad.toggle'),
+   },
+
    -- panes --
    -- panes: split panes
    {
       key = [[\]],
       mods = mod.SUPER,
-      action = act.SplitVertical({ domain = 'CurrentPaneDomain' }),
+      action = wezterm.action_callback(function(window, pane)
+         local cwd_uri = pane:get_current_working_dir()
+         local cwd = cwd_uri and cwd_uri.file_path or nil
+         window:perform_action(
+            act.SplitVertical({ domain = 'CurrentPaneDomain', cwd = cwd }),
+            pane
+         )
+      end),
    },
    {
       key = [[\]],
       mods = mod.SUPER_REV,
-      action = act.SplitHorizontal({ domain = 'CurrentPaneDomain' }),
+      action = wezterm.action_callback(function(window, pane)
+         local cwd_uri = pane:get_current_working_dir()
+         local cwd = cwd_uri and cwd_uri.file_path or nil
+         window:perform_action(
+            act.SplitHorizontal({ domain = 'CurrentPaneDomain', cwd = cwd }),
+            pane
+         )
+      end),
    },
 
    -- panes: zoom+close pane
@@ -217,6 +256,16 @@ local keys = {
          timeout_milliseconds = 1000,
       }),
    },
+   -- workspace management
+   {
+      key = 'w',
+      mods = 'LEADER',
+      action = act.ActivateKeyTable({
+         name = 'workspace',
+         one_shot = false,
+         timeout_milliseconds = 5000,
+      }),
+   },
 }
 
 -- stylua: ignore
@@ -233,6 +282,60 @@ local key_tables = {
       { key = 'j',      action = act.AdjustPaneSize({ 'Down', 1 }) },
       { key = 'h',      action = act.AdjustPaneSize({ 'Left', 1 }) },
       { key = 'l',      action = act.AdjustPaneSize({ 'Right', 1 }) },
+      { key = 'Escape', action = 'PopKeyTable' },
+      { key = 'q',      action = 'PopKeyTable' },
+   },
+   workspace = {
+      -- n: new named workspace
+      {
+         key = 'n',
+         action = wezterm.action_callback(function(window, pane)
+            window:perform_action(
+               act.PromptInputLine({
+                  description = wezterm.format({
+                     { Foreground = { Color = '#cba6f7' } },
+                     { Attribute = { Intensity = 'Bold' } },
+                     { Text = 'New workspace name:' },
+                  }),
+                  action = wezterm.action_callback(function(_win, _pane, name)
+                     if name and name ~= '' then
+                        _win:perform_action(
+                           act.SwitchToWorkspace({ name = name }),
+                           _pane
+                        )
+                     end
+                  end),
+               }),
+               pane
+            )
+            window:perform_action('PopKeyTable', pane)
+         end),
+      },
+      -- r: rename current workspace
+      {
+         key = 'r',
+         action = wezterm.action_callback(function(window, pane)
+            window:perform_action(
+               act.PromptInputLine({
+                  description = wezterm.format({
+                     { Foreground = { Color = '#cba6f7' } },
+                     { Attribute = { Intensity = 'Bold' } },
+                     { Text = 'Rename workspace to:' },
+                  }),
+                  action = wezterm.action_callback(function(_win, _pane, name)
+                     if name and name ~= '' then
+                        wezterm.mux.rename_workspace(
+                           wezterm.mux.get_active_workspace(),
+                           name
+                        )
+                     end
+                  end),
+               }),
+               pane
+            )
+            window:perform_action('PopKeyTable', pane)
+         end),
+      },
       { key = 'Escape', action = 'PopKeyTable' },
       { key = 'q',      action = 'PopKeyTable' },
    },

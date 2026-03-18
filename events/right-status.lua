@@ -25,6 +25,7 @@ local M = {}
 
 local ICON_SEPARATOR = nf.oct_dash
 local ICON_DATE = nf.fa_calendar
+local ICON_CWD  = nf.oct_file_directory
 
 ---@type string[]
 local discharging_icons = {
@@ -58,7 +59,8 @@ local charging_icons = {
 local colors = {
    date      = { fg = '#fab387', bg = 'rgba(0, 0, 0, 0.4)' },
    battery   = { fg = '#f9e2af', bg = 'rgba(0, 0, 0, 0.4)' },
-   separator = { fg = '#74c7ec', bg = 'rgba(0, 0, 0, 0.4)' }
+   separator = { fg = '#74c7ec', bg = 'rgba(0, 0, 0, 0.4)' },
+   cwd       = { fg = '#a6e3a1', bg = 'rgba(0, 0, 0, 0.4)' },
 }
 
 local cells = Cells:new()
@@ -66,7 +68,10 @@ local cells = Cells:new()
 cells
    :add_segment('date_icon', ICON_DATE .. '  ', colors.date, attr(attr.intensity('Bold')))
    :add_segment('date_text', '', colors.date, attr(attr.intensity('Bold')))
-   :add_segment('separator', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
+   :add_segment('separator',  ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
+   :add_segment('cwd_icon',   ' ' .. ICON_CWD .. ' ',        colors.cwd, attr(attr.intensity('Bold')))
+   :add_segment('cwd_text',   '',                             colors.cwd)
+   :add_segment('separator2', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
    :add_segment('battery_icon', '', colors.battery)
    :add_segment('battery_text', '', colors.battery, attr(attr.intensity('Bold')))
 
@@ -91,6 +96,41 @@ local function battery_info()
    return charge, icon .. ' '
 end
 
+---Get a shortened current working directory path from the active pane
+---Replaces home directory prefix with ~, shows at most last 2 path components
+---@param pane any WezTerm Pane
+---@return string empty string when CWD is unavailable
+local function get_short_cwd(pane)
+   local cwd_uri = pane:get_current_working_dir()
+   if not cwd_uri then return '' end
+
+   local path = cwd_uri.file_path or ''
+   if path == '' then return '' end
+
+   -- Replace home directory with ~
+   local home = os.getenv('HOME') or os.getenv('USERPROFILE') or ''
+   if home ~= '' and path:sub(1, #home) == home then
+      path = '~' .. path:sub(#home + 1)
+   end
+
+   -- Show at most last 2 path components
+   -- For home-relative paths, keep the ~ but show only the last component
+   local short
+   if path:sub(1, 2) == '~/' then
+      -- e.g. ~/a/b/c → ~/b/c (keep ~ + last 2 components relative to home)
+      local after_home = path:sub(3)  -- 'a/b/c' or 'Documents'
+      local last2 = after_home:match('([^/\\]+[/\\][^/\\]+)[/\\]?$')
+      local last1 = after_home:match('([^/\\]+)[/\\]?$')
+      short = '~/' .. (last2 or last1 or after_home)
+   else
+      -- Absolute path: last 2 components
+      local last2 = path:match('([^/\\]+[/\\][^/\\]+)[/\\]?$')
+      local last1 = path:match('([^/\\]+)[/\\]?$')
+      short = last2 or last1 or path
+   end
+   return short
+end
+
 ---@param opts? Event.RightStatusOptions Default: {date_format = '%a %H:%M:%S'}
 M.setup = function(opts)
    local valid_opts, err = EVENT_OPTS.validator:validate(opts or {})
@@ -99,19 +139,30 @@ M.setup = function(opts)
       wezterm.log_error(err)
    end
 
-   wezterm.on('update-right-status', function(window, _pane)
+   wezterm.on('update-right-status', function(window, pane)
       local battery_text, battery_icon = battery_info()
+      local cwd_short = get_short_cwd(pane)
 
       cells
-         :update_segment_text('date_text', wezterm.strftime(valid_opts.date_format))
+         :update_segment_text('date_text',    wezterm.strftime(valid_opts.date_format))
+         :update_segment_text('cwd_text',     cwd_short)
          :update_segment_text('battery_icon', battery_icon)
          :update_segment_text('battery_text', battery_text)
 
-      window:set_right_status(
-         wezterm.format(
-            cells:render({ 'date_icon', 'date_text', 'separator', 'battery_icon', 'battery_text' })
-         )
-      )
+      -- Build render list conditionally
+      local render_ids = { 'date_icon', 'date_text' }
+      if cwd_short ~= '' then
+         table.insert(render_ids, 'separator')
+         table.insert(render_ids, 'cwd_icon')
+         table.insert(render_ids, 'cwd_text')
+      end
+      if battery_text ~= '' then
+         table.insert(render_ids, 'separator2')
+         table.insert(render_ids, 'battery_icon')
+         table.insert(render_ids, 'battery_text')
+      end
+
+      window:set_right_status(wezterm.format(cells:render(render_ids)))
    end)
 end
 

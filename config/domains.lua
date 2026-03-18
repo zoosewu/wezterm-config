@@ -1,13 +1,12 @@
 local platform = require('utils.platform')
 
+-- NOTE: Assumes WSL username matches the Windows USERNAME. If they differ,
+-- override username and default_cwd manually in each wsl_domains entry.
+local username = os.getenv('USERNAME') or os.getenv('USER') or 'user'
+
 local options = {
-   -- ref: https://wezfurlong.org/wezterm/config/lua/SshDomain.html
    ssh_domains = {},
-
-   -- ref: https://wezfurlong.org/wezterm/multiplexing.html#unix-domains
    unix_domains = {},
-
-   -- ref: https://wezfurlong.org/wezterm/config/lua/WslDomain.html
    wsl_domains = {},
 }
 
@@ -26,15 +25,15 @@ if platform.is_win then
       {
          name = 'wsl:ubuntu-fish',
          distribution = 'Ubuntu',
-         username = 'kevin',
-         default_cwd = '/home/kevin',
+         username = username,
+         default_cwd = '/home/' .. username,
          default_prog = { 'fish', '-l' },
       },
       {
          name = 'wsl:ubuntu-bash',
          distribution = 'Ubuntu',
-         username = 'kevin',
-         default_cwd = '/home/kevin',
+         username = username,
+         default_cwd = '/home/' .. username,
          default_prog = { 'bash', '-l' },
       },
    }

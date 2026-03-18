@@ -32,8 +32,65 @@ GpuAdapters.AVAILABLE_BACKENDS = {
    mac = { 'Metal' },
 }
 
----@type WeztermGPUAdapter[]
-GpuAdapters.ENUMERATED_GPUS = wezterm.gui.enumerate_gpus()
+-- Disk cache for GPU adapter list.
+-- Avoids the ~270ms cold-start cost of wezterm.gui.enumerate_gpus() on every launch.
+local CACHE_FILE = wezterm.config_dir .. '/gpu-cache.json'
+
+---Read GPU adapter list from disk cache.
+---@return WeztermGPUAdapter[]|nil
+local function read_cache()
+   local f = io.open(CACHE_FILE, 'r')
+   if not f then return nil end
+   local content = f:read('*a')
+   f:close()
+   local ok, data = pcall(wezterm.json_decode, content)
+   if ok and type(data) == 'table' and #data > 0 then return data end
+   return nil
+end
+
+---Write GPU adapter list to disk cache.
+---@param gpus WeztermGPUAdapter[]
+local function write_cache(gpus)
+   if #gpus == 0 then return end
+   local ok, json = pcall(wezterm.json_encode, gpus)
+   if not ok then
+      wezterm.log_warn('[gpu-adapter] encode failed: ' .. tostring(json))
+      return
+   end
+   local f = io.open(CACHE_FILE, 'w')
+   if not f then
+      wezterm.log_warn('[gpu-adapter] cannot write cache: ' .. CACHE_FILE)
+      return
+   end
+   f:write(json)
+   f:close()
+   wezterm.log_info('[gpu-adapter] cache updated (' .. #gpus .. ' adapter(s))')
+end
+
+-- Fast path: load from disk cache so enumerate_gpus() is skipped at startup.
+-- On first launch (no cache), ENUMERATED_GPUS is empty and pick_best()/pick_manual()
+-- return nil — WezTerm auto-selects the GPU for this session.
+local _cached = read_cache()
+GpuAdapters.ENUMERATED_GPUS = _cached or {}
+
+if _cached then
+   wezterm.log_info('[gpu-adapter] loaded ' .. #_cached .. ' adapter(s) from cache')
+else
+   wezterm.log_info('[gpu-adapter] no cache — WezTerm will auto-select GPU this session')
+end
+
+-- Background cache refresh: runs once per WezTerm session, 2 seconds after GUI starts.
+-- Re-enumerates adapters and writes cache so the next launch uses the correct adapter.
+-- wezterm.GLOBAL prevents duplicate registrations across config hot-reloads.
+if not wezterm.GLOBAL._gpu_cache_refresh_registered then
+   wezterm.GLOBAL._gpu_cache_refresh_registered = true
+   wezterm.on('gui-startup', function()
+      wezterm.time.call_after(2, function()
+         local fresh = wezterm.gui.enumerate_gpus()
+         write_cache(fresh)
+      end)
+   end)
+end
 
 ---@return GpuAdapters
 ---@private
@@ -47,7 +104,6 @@ function GpuAdapters:init()
       Other = nil,
    }
 
-   -- iterate over the enumerated GPUs and create a lookup table (`AdapterMap`)
    for _, adapter in ipairs(self.ENUMERATED_GPUS) do
       if not initial[adapter.device_type] then
          initial[adapter.device_type] = {}
@@ -55,9 +111,7 @@ function GpuAdapters:init()
       initial[adapter.device_type][adapter.backend] = adapter
    end
 
-   local gpu_adapters = setmetatable(initial, self)
-
-   return gpu_adapters
+   return setmetatable(initial, self)
 end
 
 ---Will pick the best adapter based on the following criteria:
@@ -71,10 +125,6 @@ end
 ---@see GpuAdapters.AVAILABLE_BACKENDS
 ---
 ---If the best adapter combo is not found, it will return `nil` and lets Wezterm decide the best adapter.
----
----Please note these are my own personal preferences and may not be the best for your system.
----If you want to manually choose the adapter, use `GpuAdapters:pick_manual(backend, device_type)`
----Or feel free to re-arrange `GpuAdapters.AVAILABLE_BACKENDS` to you liking
 ---@return WeztermGPUAdapter|nil
 function GpuAdapters:pick_best()
    local adapters_options = self.DiscreteGpu
@@ -94,14 +144,14 @@ function GpuAdapters:pick_best()
    end
 
    if not adapters_options then
-      wezterm.log_error('No GPU adapters found. Using Default Adapter.')
+      wezterm.log_warn('[gpu-adapter] no adapters in cache — letting WezTerm auto-select')
       return nil
    end
 
    local adapter_choice = adapters_options[preferred_backend]
 
    if not adapter_choice then
-      wezterm.log_error('Preferred backend not available. Using Default Adapter.')
+      wezterm.log_warn('[gpu-adapter] preferred backend not in cache — letting WezTerm auto-select')
       return nil
    end
 
@@ -117,14 +167,14 @@ function GpuAdapters:pick_manual(backend, device_type)
    local adapters_options = self[device_type]
 
    if not adapters_options then
-      wezterm.log_error('No GPU adapters found. Using Default Adapter.')
+      wezterm.log_warn('[gpu-adapter] device type not in cache — letting WezTerm auto-select')
       return nil
    end
 
    local adapter_choice = adapters_options[backend]
 
    if not adapter_choice then
-      wezterm.log_error('Preferred backend not available. Using Default Adapter.')
+      wezterm.log_warn('[gpu-adapter] backend not in cache — letting WezTerm auto-select')
       return nil
    end
 
