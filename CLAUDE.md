@@ -21,19 +21,27 @@ config/
   init.lua             # Config class（append 合併邏輯）
   launch.lua           # Launch menu 偏好 shell ← 客製化優先修改這裡
 events/
-  gui-startup.lua      # GUI 啟動事件
-  left-status.lua      # 左側狀態列
-  right-status.lua     # 右側狀態列（顯示日期時間）
+  gui-startup.lua      # GUI 啟動事件（session restore、maximize）
+  left-status.lua      # 左側狀態列（keytable / workspace / pane 程序）
+  right-status.lua     # 右側狀態列（日期時間、CWD）
   new-tab-button.lua   # 新分頁 + 按鈕
-  tab-title.lua        # Tab 標題（含 unseen 通知）
+  tab-title.lua        # Tab 標題（含 unseen 通知、WSL/Admin 偵測）
 utils/
-  backdrops.lua        # 背景圖片管理（隨機 / 循環 / Fuzzy 搜尋 / toggle focus）
+  backdrops.lua        # 背景圖片管理（per-window 狀態、隨機 / 循環 / Fuzzy / focus）
   cells.lua            # 狀態列 cell 工具
-  gpu-adapter.lua      # WebGPU 最佳 GPU+API 自動選擇器
+  gpu-adapter.lua      # WebGPU 最佳 GPU+API 自動選擇器（磁碟快取加速啟動）
+  health-check.lua     # 啟動自我診斷（F12 Debug Overlay 查看）
   math.lua             # 數學工具
   opts-validator.lua   # 選項型別驗證
   platform.lua         # 平台偵測（is_mac / is_win / is_linux）
-colors/                # 自訂色彩主題 (.toml)
+  scratchpad.lua       # 快速筆記 pane（per-tab 底部 25% 浮動）
+  session.lua          # Session 持久化（儲存 / 還原 tab CWD）
+  theme-switcher.lua   # 自動深/淺色主題切換（Catppuccin Mocha / Latte）
+  timing.lua           # 啟動計時工具（timing.ENABLED = true 開啟）
+  window-overrides.lua # 集中式 per-window config override 管理器
+colors/
+  custom.lua           # Catppuccin Mocha 深色主題
+  catppuccin-latte.lua # Catppuccin Latte 淺色主題
 backdrops/             # 背景圖片資源
 ```
 
@@ -80,7 +88,7 @@ backdrops/             # 背景圖片資源
 ### Tab 管理
 | 按鍵 | 功能 |
 |------|------|
-| SUPER + t | 新 Tab（預設 Domain）|
+| SUPER + t | 新 Tab（繼承當前 CWD）|
 | SUPER_REV + t | 新 Tab（WSL:Ubuntu）|
 | SUPER_REV + w | 關閉 Tab |
 | SUPER + [ / ] | 切換 Tab（上一個 / 下一個）|
@@ -92,14 +100,15 @@ backdrops/             # 背景圖片資源
 ### Pane 管理
 | 按鍵 | 功能 |
 |------|------|
-| SUPER + \ | 垂直分割 |
-| SUPER_REV + \ | 水平分割 |
+| SUPER + \ | 垂直分割（繼承當前 CWD）|
+| SUPER_REV + \ | 水平分割（繼承當前 CWD）|
 | SUPER + Enter | Toggle Pane Zoom |
 | SUPER + w | 關閉 Pane |
 | SUPER_REV + h/j/k/l | 切換 Pane（左/下/上/右）|
 | SUPER_REV + p | 選擇並 Swap Pane |
 | SUPER + u / d | 捲動 5 行（上/下）|
 | PageUp / PageDown | 捲動 0.75 頁 |
+| SUPER_REV + ` | Toggle Scratchpad Pane |
 
 ### 視窗控制
 | 按鍵 | 功能 |
@@ -118,11 +127,17 @@ backdrops/             # 背景圖片資源
 | SUPER_REV + / | Fuzzy 選擇背景 |
 | SUPER + b | Toggle 背景 Focus 模式 |
 
+### Session
+| 按鍵 | 功能 |
+|------|------|
+| SUPER_REV + s | 儲存 Session（記錄各 Tab CWD）|
+
 ### Key Tables（LEADER 模式）
 | 按鍵 | 功能 |
 |------|------|
 | LEADER + f | 進入 resize_font 模式 |
 | LEADER + p | 進入 resize_pane 模式 |
+| LEADER + w | 進入 workspace 模式 |
 
 **resize_font / resize_pane 模式**（按 `q` 或 `Esc` 離開）
 
@@ -133,6 +148,13 @@ backdrops/             # 背景圖片資源
 | h | — | Pane 向左擴大 |
 | l | — | Pane 向右擴大 |
 | r | 重置字體大小 | — |
+
+**workspace 模式**（按 `q` 或 `Esc` 離開，timeout 5 秒）
+
+| 按鍵 | 功能 |
+|------|------|
+| n | 新建並命名 Workspace |
+| r | 重新命名當前 Workspace |
 
 ---
 
@@ -150,7 +172,18 @@ backdrops/             # 背景圖片資源
 
 ## 工作結束後的例行檢查
 
-每次工作完成後，**必須**執行：
+每次工作完成後，**必須**執行以下兩項同步：
+
+### 1. README.md 快捷鍵同步
+
+每次 `config/bindings.lua` 有異動時，必須同步更新 `README.md` 的 **All Key Bindings** 區段，確保文件與實際按鍵一致。
+
+更新範圍包含：
+- 新增 / 刪除的快捷鍵條目
+- 行為描述有變更的條目（例如「繼承 CWD」等）
+- 新增的 Key Table 或 Key Table 內的按鍵
+
+### 2. PowerShell Profile 快捷鍵同步
 
 ```bash
 # 檢查 PowerShell profile 是否存在，若存在則同步更新快捷鍵清單

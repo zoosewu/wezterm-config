@@ -265,11 +265,11 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 ##### Tabs: Spawn+Close
 
-| Keys                              | Action                                |
-| --------------------------------- | ------------------------------------- |
-| <kbd>SUPER</kbd>+<kbd>t</kbd>     | `SpawnTab` <sub>(DefaultDomain)</sub> |
-| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(WSL:Ubuntu)</sub>    |
-| <kbd>SUPER_REV</kbd>+<kbd>w</kbd> | `CloseCurrentTab`                     |
+| Keys                              | Action                                                          |
+| --------------------------------- | --------------------------------------------------------------- |
+| <kbd>SUPER</kbd>+<kbd>t</kbd>     | `SpawnTab` <sub>(DefaultDomain, inherits current CWD)</sub>     |
+| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(WSL:Ubuntu)</sub>                              |
+| <kbd>SUPER_REV</kbd>+<kbd>w</kbd> | `CloseCurrentTab`                                               |
 
 ##### Tabs: Navigation
 
@@ -297,11 +297,12 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 #### Windows
 
-| Keys                          | Action               |
-| ----------------------------- | -------------------- |
-| <kbd>SUPER</kbd>+<kbd>n</kbd> | `SpawnWindow`        |
-| <kbd>SUPER</kbd>+<kbd>=</kbd> | Increase Window Size |
-| <kbd>SUPER</kbd>+<kbd>-</kbd> | Decrease Window Size |
+| Keys                              | Action               |
+| --------------------------------- | -------------------- |
+| <kbd>SUPER</kbd>+<kbd>n</kbd>     | `SpawnWindow`        |
+| <kbd>SUPER</kbd>+<kbd>=</kbd>     | Increase Window Size |
+| <kbd>SUPER</kbd>+<kbd>-</kbd>     | Decrease Window Size |
+| <kbd>SUPER_REV</kbd>+<kbd>Enter</kbd> | Maximize Window  |
 
 &nbsp;
 
@@ -309,10 +310,10 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 ##### Panes: Split Panes
 
-| Keys                               | Action                                           |
-| ---------------------------------- | ------------------------------------------------ |
-| <kbd>SUPER</kbd>+<kbd>\\</kbd>     | `SplitVertical` <sub>(CurrentPaneDomain)</sub>   |
-| <kbd>SUPER_REV</kbd>+<kbd>\\</kbd> | `SplitHorizontal` <sub>(CurrentPaneDomain)</sub> |
+| Keys                               | Action                                                               |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| <kbd>SUPER</kbd>+<kbd>\\</kbd>     | `SplitVertical` <sub>(CurrentPaneDomain, inherits current CWD)</sub> |
+| <kbd>SUPER_REV</kbd>+<kbd>\\</kbd> | `SplitHorizontal` <sub>(CurrentPaneDomain, inherits current CWD)</sub> |
 
 ##### Panes: Zoom+Close Pane
 
@@ -340,6 +341,20 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | <kbd>PageUp</kbd>             | Scroll Page up                       |
 | <kbd>PageDown</kbd>           | Scroll Page down                     |
 
+##### Panes: Scratchpad
+
+| Keys                                | Action                                              |
+| ----------------------------------- | --------------------------------------------------- |
+| <kbd>SUPER_REV</kbd>+<kbd>`</kbd>   | Toggle Scratchpad Pane <sub>(25% bottom split)</sub> |
+
+&nbsp;
+
+#### Session
+
+| Keys                              | Action                                        |
+| --------------------------------- | --------------------------------------------- |
+| <kbd>SUPER_REV</kbd>+<kbd>s</kbd> | Save Session <sub>(records all tab CWDs)</sub> |
+
 &nbsp;
 
 #### Background Images
@@ -358,10 +373,11 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 > See: <https://wezfurlong.org/wezterm/config/key-tables.html>
 
-| Keys                           | Action        |
-| ------------------------------ | ------------- |
+| Keys                           | Action      |
+| ------------------------------ | ----------- |
 | <kbd>LEADER</kbd>+<kbd>f</kbd> | `resize_font` |
 | <kbd>LEADER</kbd>+<kbd>p</kbd> | `resize_pane` |
+| <kbd>LEADER</kbd>+<kbd>w</kbd> | `workspace` |
 
 ##### Key Table: `resize_font`
 
@@ -383,6 +399,15 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | <kbd>l</kbd>   | `AdjustPaneSize` <sub>(Direction: Right)</sub> |
 | <kbd>q</kbd>   | `PopKeyTable` <sub>(exit)</sub>                |
 | <kbd>Esc</kbd> | `PopKeyTable` <sub>(exit)</sub>                |
+
+##### Key Table: `workspace` <sub>(timeout: 5s)</sub>
+
+| Keys           | Action                          |
+| -------------- | ------------------------------- |
+| <kbd>n</kbd>   | New named Workspace             |
+| <kbd>r</kbd>   | Rename current Workspace        |
+| <kbd>q</kbd>   | `PopKeyTable` <sub>(exit)</sub> |
+| <kbd>Esc</kbd> | `PopKeyTable` <sub>(exit)</sub> |
 
 ---
 
