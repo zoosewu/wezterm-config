@@ -60,104 +60,6 @@ backdrops/             # 背景圖片資源
 
 ---
 
-## 快捷鍵速查（Windows / Linux）
-
-> macOS：SUPER = `Super`，SUPER_REV = `Super+Ctrl`
-> Windows/Linux：SUPER = `Alt`，SUPER_REV = `Alt+Ctrl`
-> LEADER = `SUPER_REV + Space`（即 `Alt+Ctrl+Space`）
-
-### 功能鍵
-| 按鍵 | 功能 |
-|------|------|
-| F1 | Copy Mode |
-| F2 | Command Palette |
-| F3 | Launcher |
-| F4 | Launcher（Tabs only）|
-| F5 | Launcher（Workspaces only）|
-| F11 | Toggle Full Screen |
-| F12 | Debug Overlay |
-
-### 常用操作
-| 按鍵 | 功能 |
-|------|------|
-| SUPER + f | 搜尋文字 |
-| SUPER_REV + u | 開啟 URL |
-| Ctrl+Shift+C | 複製 |
-| Ctrl+Shift+V | 貼上 |
-
-### Tab 管理
-| 按鍵 | 功能 |
-|------|------|
-| SUPER + t | 新 Tab（繼承當前 CWD）|
-| SUPER_REV + t | 新 Tab（WSL:Ubuntu）|
-| SUPER_REV + w | 關閉 Tab |
-| SUPER + [ / ] | 切換 Tab（上一個 / 下一個）|
-| SUPER_REV + [ / ] | 移動 Tab 位置 |
-| SUPER + 9 | 顯示 / 隱藏 Tab Bar |
-| SUPER + 0 | 重新命名 Tab |
-| SUPER_REV + 0 | 取消重新命名 |
-
-### Pane 管理
-| 按鍵 | 功能 |
-|------|------|
-| SUPER + \ | 垂直分割（繼承當前 CWD）|
-| SUPER_REV + \ | 水平分割（繼承當前 CWD）|
-| SUPER + Enter | Toggle Pane Zoom |
-| SUPER + w | 關閉 Pane |
-| SUPER_REV + h/j/k/l | 切換 Pane（左/下/上/右）|
-| SUPER_REV + p | 選擇並 Swap Pane |
-| SUPER + u / d | 捲動 5 行（上/下）|
-| PageUp / PageDown | 捲動 0.75 頁 |
-| SUPER_REV + ` | Toggle Scratchpad Pane |
-
-### 視窗控制
-| 按鍵 | 功能 |
-|------|------|
-| SUPER + n | 新視窗 |
-| SUPER + = | 視窗放大 50px |
-| SUPER + - | 視窗縮小 50px |
-| SUPER_REV + Enter | 最大化視窗 |
-
-### 背景圖片
-| 按鍵 | 功能 |
-|------|------|
-| SUPER + / | 隨機背景 |
-| SUPER + , | 上一張背景 |
-| SUPER + . | 下一張背景 |
-| SUPER_REV + / | Fuzzy 選擇背景 |
-| SUPER + b | Toggle 背景 Focus 模式 |
-
-### Session
-| 按鍵 | 功能 |
-|------|------|
-| SUPER_REV + s | 儲存 Session（記錄各 Tab CWD）|
-
-### Key Tables（LEADER 模式）
-| 按鍵 | 功能 |
-|------|------|
-| LEADER + f | 進入 resize_font 模式 |
-| LEADER + p | 進入 resize_pane 模式 |
-| LEADER + w | 進入 workspace 模式 |
-
-**resize_font / resize_pane 模式**（按 `q` 或 `Esc` 離開）
-
-| 按鍵 | resize_font | resize_pane |
-|------|-------------|-------------|
-| k | 增加字體大小 | Pane 向上擴大 |
-| j | 減少字體大小 | Pane 向下擴大 |
-| h | — | Pane 向左擴大 |
-| l | — | Pane 向右擴大 |
-| r | 重置字體大小 | — |
-
-**workspace 模式**（按 `q` 或 `Esc` 離開，timeout 5 秒）
-
-| 按鍵 | 功能 |
-|------|------|
-| n | 新建並命名 Workspace |
-| r | 重新命名當前 Workspace |
-
----
-
 ## PS Profile 格式規則
 
 更新 `/mnt/PowerShell/Microsoft.PowerShell_profile.ps1` 時，快捷鍵表格須遵守以下排版規則：
@@ -170,25 +72,24 @@ backdrops/             # 背景圖片資源
 
 ---
 
-## 工作結束後的例行檢查
+## PS Profile 備份規則
 
-每次工作完成後，**必須**執行以下兩項同步：
+`/mnt/PowerShell/Microsoft.PowerShell_profile.ps1` 的備份存放於本專案的 `powershell/Microsoft.PowerShell_profile.ps1`，由 git 管理版本。
 
-### 1. README.md 快捷鍵同步
-
-每次 `config/bindings.lua` 有異動時，必須同步更新 `README.md` 的 **All Key Bindings** 區段，確保文件與實際按鍵一致。
-
-更新範圍包含：
-- 新增 / 刪除的快捷鍵條目
-- 行為描述有變更的條目（例如「繼承 CWD」等）
-- 新增的 Key Table 或 Key Table 內的按鍵
-
-### 2. PowerShell Profile 快捷鍵同步
+**每次修改完 PS Profile 後，必須執行以下備份指令：**
 
 ```bash
-# 檢查 PowerShell profile 是否存在，若存在則同步更新快捷鍵清單
-[ -f /mnt/PowerShell/Microsoft.PowerShell_profile.ps1 ] && echo "需更新 PS profile"
+cp /mnt/PowerShell/Microsoft.PowerShell_profile.ps1 /workspace/powershell/Microsoft.PowerShell_profile.ps1
 ```
 
-- PS profile 路徑：`/mnt/PowerShell/Microsoft.PowerShell_profile.ps1`
-- 更新內容：PS profile 中的 WezTerm 快捷鍵說明需與 `config/bindings.lua` 保持一致
+---
+
+## 工作結束後的例行檢查
+
+每次工作完成後，**必須**確認以下三處是否需要更新（內容以實際修改為準）：
+
+1. **`README.md`**：確保文件與當前設定一致
+2. **`/mnt/PowerShell/Microsoft.PowerShell_profile.ps1`**（若檔案存在）：確保 PS profile 中的說明與設定一致
+3. **`powershell/Microsoft.PowerShell_profile.ps1`**：將 PS profile 備份至本專案（執行上方備份指令）
+
+> **注意**：修改 `config/bindings.lua` 時，hook 會自動提醒同步。其他檔案的修改請自行判斷是否影響上述三處。

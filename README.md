@@ -268,15 +268,15 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | Keys                              | Action                                                          |
 | --------------------------------- | --------------------------------------------------------------- |
 | <kbd>SUPER</kbd>+<kbd>t</kbd>     | `SpawnTab` <sub>(DefaultDomain, inherits current CWD)</sub>     |
-| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(WSL:Ubuntu)</sub>                              |
+| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(wsl:ubuntu-fish)</sub>                         |
 | <kbd>SUPER_REV</kbd>+<kbd>w</kbd> | `CloseCurrentTab`                                               |
 
 ##### Tabs: Navigation
 
 | Keys                              | Action         |
 | --------------------------------- | -------------- |
-| <kbd>SUPER</kbd>+<kbd>[</kbd>     | Next Tab       |
-| <kbd>SUPER</kbd>+<kbd>]</kbd>     | Previous Tab   |
+| <kbd>SUPER</kbd>+<kbd>[</kbd>     | Previous Tab   |
+| <kbd>SUPER</kbd>+<kbd>]</kbd>     | Next Tab       |
 | <kbd>SUPER_REV</kbd>+<kbd>[</kbd> | Move Tab Left  |
 | <kbd>SUPER_REV</kbd>+<kbd>]</kbd> | Move Tab Right |
 
@@ -362,8 +362,8 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | Keys                              | Action                       |
 | --------------------------------- | ---------------------------- |
 | <kbd>SUPER</kbd>+<kbd>/</kbd>     | Select Random Image          |
-| <kbd>SUPER</kbd>+<kbd>,</kbd>     | Cycle to next Image          |
-| <kbd>SUPER</kbd>+<kbd>.</kbd>     | Cycle to previous Image      |
+| <kbd>SUPER</kbd>+<kbd>,</kbd>     | Cycle to previous Image      |
+| <kbd>SUPER</kbd>+<kbd>.</kbd>     | Cycle to next Image          |
 | <kbd>SUPER_REV</kbd>+<kbd>/</kbd> | Fuzzy select Image           |
 | <kbd>SUPER</kbd>+<kbd>b</kbd>     | Toggle background focus mode |
 
