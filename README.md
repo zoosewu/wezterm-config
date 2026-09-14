@@ -55,6 +55,28 @@
 
       </details>
 
+- [**CWD Inheritance**](https://github.com/KevinSilvester/wezterm-config/blob/master/utils/cwd.lua)
+
+  新 Tab、新分割、新視窗，以及新分頁按鈕右鍵的 Launch Menu，都會以**當前 pane 的工作目錄**為起點。
+
+  跨 domain 時會自動處理：
+
+  | 目標 domain            | 行為                                                    |
+  | ---------------------- | ------------------------------------------------------- |
+  | 同一個 domain（分割）  | 直接沿用當前目錄                                        |
+  | DefaultDomain（本機）  | 沿用當前目錄；若當前 pane 是 WSL/SSH 則略過（路徑不通用）|
+  | WSL domain             | `C:\Users\x` 自動轉換為 `/mnt/c/Users/x`                |
+  | SSH / Unix domain      | 不帶目錄（本機路徑在遠端無意義）                        |
+
+  > :warning: **PowerShell 使用者必讀**
+  >
+  > PowerShell 的 `Set-Location` 只改變 provider location，**不會**改變 process 的實際
+  > working directory，因此 WezTerm 無法自行推得 CWD。本專案的
+  > [`powershell/Microsoft.PowerShell_profile.ps1`](./powershell/Microsoft.PowerShell_profile.ps1)
+  > 內含 OSC 7 prompt hook 來主動回報目錄，請確保它已套用至你的 `$PROFILE`。
+  >
+  > bash / zsh / fish 通常已內建 OSC 7 支援，無須額外設定。
+
 ---
 
 ### Getting Started
@@ -268,7 +290,7 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | Keys                              | Action                                                          |
 | --------------------------------- | --------------------------------------------------------------- |
 | <kbd>SUPER</kbd>+<kbd>t</kbd>     | `SpawnTab` <sub>(DefaultDomain, inherits current CWD)</sub>     |
-| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(wsl:ubuntu-fish)</sub>                         |
+| <kbd>SUPER_REV</kbd>+<kbd>t</kbd> | `SpawnTab` <sub>(wsl:ubuntu-fish, inherits current CWD as `/mnt/<drive>/…`)</sub> |
 | <kbd>SUPER_REV</kbd>+<kbd>w</kbd> | `CloseCurrentTab`                                               |
 
 ##### Tabs: Navigation
@@ -299,7 +321,7 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 | Keys                              | Action               |
 | --------------------------------- | -------------------- |
-| <kbd>SUPER</kbd>+<kbd>n</kbd>     | `SpawnWindow`        |
+| <kbd>SUPER</kbd>+<kbd>n</kbd>     | `SpawnWindow` <sub>(DefaultDomain, inherits current CWD)</sub> |
 | <kbd>SUPER</kbd>+<kbd>=</kbd>     | Increase Window Size |
 | <kbd>SUPER</kbd>+<kbd>-</kbd>     | Decrease Window Size |
 | <kbd>SUPER_REV</kbd>+<kbd>Enter</kbd> | Maximize Window  |

@@ -1,6 +1,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
+local cwd_util = require('utils.cwd')
 local act = wezterm.action
 
 local mod = {}
@@ -63,15 +64,28 @@ local keys = {
       key = 't',
       mods = mod.SUPER,
       action = wezterm.action_callback(function(window, pane)
-         local cwd_uri = pane:get_current_working_dir()
-         local cwd = cwd_uri and cwd_uri.file_path or nil
          window:perform_action(
-            act.SpawnCommandInNewTab({ domain = 'DefaultDomain', cwd = cwd }),
+            act.SpawnCommandInNewTab({
+               domain = 'DefaultDomain',
+               cwd = cwd_util.get_local(pane),
+            }),
             pane
          )
       end),
    },
-   { key = 't',          mods = mod.SUPER_REV, action = act.SpawnTab({ DomainName = 'wsl:ubuntu-fish' }) },
+   {
+      key = 't',
+      mods = mod.SUPER_REV,
+      action = wezterm.action_callback(function(window, pane)
+         window:perform_action(
+            act.SpawnCommandInNewTab({
+               domain = { DomainName = 'wsl:ubuntu-fish' },
+               cwd = cwd_util.to_wsl(cwd_util.get(pane)),
+            }),
+            pane
+         )
+      end),
+   },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- tabs: navigation
@@ -96,7 +110,19 @@ local keys = {
 
    -- window --
    -- window: spawn windows
-   { key = 'n',          mods = mod.SUPER,     action = act.SpawnWindow },
+   {
+      key = 'n',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, pane)
+         window:perform_action(
+            act.SpawnCommandInNewWindow({
+               domain = 'DefaultDomain',
+               cwd = cwd_util.get_local(pane),
+            }),
+            pane
+         )
+      end),
+   },
 
    -- window: zoom window
    {
@@ -193,10 +219,11 @@ local keys = {
       key = [[\]],
       mods = mod.SUPER,
       action = wezterm.action_callback(function(window, pane)
-         local cwd_uri = pane:get_current_working_dir()
-         local cwd = cwd_uri and cwd_uri.file_path or nil
          window:perform_action(
-            act.SplitVertical({ domain = 'CurrentPaneDomain', cwd = cwd }),
+            act.SplitVertical({
+               domain = 'CurrentPaneDomain',
+               cwd = cwd_util.get(pane),
+            }),
             pane
          )
       end),
@@ -205,10 +232,11 @@ local keys = {
       key = [[\]],
       mods = mod.SUPER_REV,
       action = wezterm.action_callback(function(window, pane)
-         local cwd_uri = pane:get_current_working_dir()
-         local cwd = cwd_uri and cwd_uri.file_path or nil
          window:perform_action(
-            act.SplitHorizontal({ domain = 'CurrentPaneDomain', cwd = cwd }),
+            act.SplitHorizontal({
+               domain = 'CurrentPaneDomain',
+               cwd = cwd_util.get(pane),
+            }),
             pane
          )
       end),

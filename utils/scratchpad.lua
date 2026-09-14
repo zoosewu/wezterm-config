@@ -2,6 +2,7 @@
 -- Toggle a scratchpad pane at the bottom of the current tab.
 -- Tracks scratchpad pane IDs per tab to allow toggle behaviour.
 local wezterm = require('wezterm')
+local cwd_util = require('utils.cwd')
 local act = wezterm.action
 
 local M = {}
@@ -51,10 +52,11 @@ M.setup = function()
          end
       end
 
-      -- Create new scratchpad pane (25% of current pane height)
+      -- Create new scratchpad pane (25% of current pane height, same CWD)
       local new_pane = pane:split({
          direction = 'Bottom',
          size = 0.25,
+         cwd = cwd_util.get(pane),
       })
       if new_pane then
          _scratchpad_panes[tab_id] = new_pane:pane_id()

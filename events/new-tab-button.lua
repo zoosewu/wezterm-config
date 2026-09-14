@@ -2,6 +2,7 @@ local wezterm = require('wezterm')
 local launch_menu = require('config.launch').launch_menu
 local domains = require('config.domains')
 local Cells = require('utils.cells')
+local cwd_util = require('utils.cwd')
 
 local nf = wezterm.nerdfonts
 local act = wezterm.action
@@ -40,8 +41,8 @@ local function build_choices()
          label = wezterm.format(cells:render({ 'icon_default', 'label_text' })),
       })
       table.insert(choices_data, {
-         args = v.args,
-         domain = 'DefaultDomain',
+         kind = 'local',
+         spawn = { args = v.args, domain = 'DefaultDomain' },
       })
       idx = idx + 1
    end
@@ -55,7 +56,8 @@ local function build_choices()
          label = wezterm.format(cells:render({ 'icon_wsl', 'label_text' })),
       })
       table.insert(choices_data, {
-         domain = { DomainName = v.name },
+         kind = 'wsl',
+         spawn = { domain = { DomainName = v.name } },
       })
       idx = idx + 1
    end
@@ -68,7 +70,8 @@ local function build_choices()
          label = wezterm.format(cells:render({ 'icon_ssh', 'label_text' })),
       })
       table.insert(choices_data, {
-         domain = { DomainName = v.name },
+         kind = 'remote',
+         spawn = { domain = { DomainName = v.name } },
       })
       idx = idx + 1
    end
@@ -81,7 +84,8 @@ local function build_choices()
          label = wezterm.format(cells:render({ 'icon_unix', 'label_text' })),
       })
       table.insert(choices_data, {
-         domain = { DomainName = v.name },
+         kind = 'remote',
+         spawn = { domain = { DomainName = v.name } },
       })
       idx = idx + 1
    end
@@ -90,6 +94,23 @@ local function build_choices()
 end
 
 local choices, choices_data = build_choices()
+
+---Build a SpawnCommand for a launch-menu entry, inheriting the pane's CWD.
+---`choices_data` is shared module state, so never mutate it in place.
+---@param entry table entry from `choices_data`
+---@param pane any WezTerm Pane the launcher was invoked from
+---@return table
+local function build_spawn(entry, pane)
+   local cwd
+   if entry.kind == 'local' then
+      cwd = cwd_util.get_local(pane)
+   elseif entry.kind == 'wsl' then
+      cwd = cwd_util.to_wsl(cwd_util.get(pane))
+   end
+   -- 'remote' (ssh/unix): a local path is meaningless there, so leave cwd unset
+
+   return { args = entry.spawn.args, domain = entry.spawn.domain, cwd = cwd }
+end
 
 M.setup = function()
    wezterm.on('new-tab-button-click', function(window, pane, button, default_action)
@@ -109,9 +130,10 @@ M.setup = function()
                      return
                   else
                      wezterm.log_info('you selected ', id, label)
-                     wezterm.log_info(choices_data[tonumber(id)])
+                     local entry = choices_data[tonumber(id)]
+                     wezterm.log_info(entry)
                      window:perform_action(
-                        act.SpawnCommandInNewTab(choices_data[tonumber(id)]),
+                        act.SpawnCommandInNewTab(build_spawn(entry, pane)),
                         pane
                      )
                   end

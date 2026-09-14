@@ -2,6 +2,28 @@
 # PowerShell Profile
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# WezTerm OSC 7 — 回報當前工作目錄
+# -----------------------------------------------------------------------------
+# PowerShell 的 Set-Location 只改變 provider location，不會改變 process 的實際
+# working directory，因此 WezTerm 無法從 process 資訊推得 CWD。必須主動用 OSC 7
+# 序列回報，新 Tab / 新分割 / 新視窗才能正確繼承當前目錄。
+if (-not $global:__WeztermOsc7Installed) {
+    $global:__WeztermOsc7Installed = $true
+    $global:__WeztermOriginalPrompt = $function:prompt
+
+    function global:prompt {
+        $loc = $ExecutionContext.SessionState.Path.CurrentLocation
+        if ($loc.Provider.Name -eq 'FileSystem') {
+            $p = $loc.ProviderPath -replace '\\', '/'
+            if ($p -notmatch '^/') { $p = "/$p" }
+            $uri = 'file://' + $env:COMPUTERNAME + [uri]::EscapeUriString($p)
+            Write-Host -NoNewline ("$([char]27)]7;$uri$([char]7)")
+        }
+        & $global:__WeztermOriginalPrompt
+    }
+}
+
 function Show-WeztermHelp {
     $cyan    = [System.ConsoleColor]::Cyan
     $yellow  = [System.ConsoleColor]::Yellow
@@ -118,6 +140,7 @@ function Show-WeztermHelp {
     Write-Host ''
     Write-Host ("  " + [string]('═' * 82)) -ForegroundColor $gray
     Write-Host '  * SUPER+BS 清除整行不支援 PowerShell/cmd' -ForegroundColor $gray
+    Write-Host '  新 Tab / 新分割 / 新視窗皆以當前目錄為起點（WSL 自動轉為 /mnt/<drive>/…）' -ForegroundColor $gray
     Write-Host '  輸入 Show-WeztermHelp 可隨時重新顯示此說明' -ForegroundColor $green
     Write-Host ''
 }
