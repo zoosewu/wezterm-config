@@ -1,5 +1,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
+local state_file = require('utils.state-file')
+local startup = require('utils.startup')
 
 ---@alias WeztermGPUBackend 'Vulkan'|'Metal'|'Gl'|'Dx12'
 ---@alias WeztermGPUDeviceType 'DiscreteGpu'|'IntegratedGpu'|'Cpu'|'Other'
@@ -32,70 +34,41 @@ GpuAdapters.AVAILABLE_BACKENDS = {
    mac = { 'Metal' },
 }
 
--- Disk cache for GPU adapter list.
+-- Disk cache for GPU adapter list (see utils/state-file.lua for its location).
 -- Avoids the ~270ms cold-start cost of wezterm.gui.enumerate_gpus() on every launch.
-local CACHE_FILE = wezterm.config_dir .. '/gpu-cache.json'
-
--- Stable builds only have json_parse/json_encode; nightly moved them to wezterm.serde
-local json_decode = wezterm.json_parse or (wezterm.serde and wezterm.serde.json_decode)
-local json_encode = wezterm.json_encode or (wezterm.serde and wezterm.serde.json_encode)
-
----Read GPU adapter list from disk cache.
----@return WeztermGPUAdapter[]|nil
-local function read_cache()
-   local f = io.open(CACHE_FILE, 'r')
-   if not f then return nil end
-   local content = f:read('*a')
-   f:close()
-   local ok, data = pcall(json_decode, content)
-   if ok and type(data) == 'table' and #data > 0 then return data end
-   return nil
-end
-
----Write GPU adapter list to disk cache.
----Skips the write when unchanged: the cache lives in the watched config dir,
----so every write triggers a config reload (and a re-render).
----@param gpus WeztermGPUAdapter[]
----@param cached WeztermGPUAdapter[]|nil
-local function write_cache(gpus, cached)
-   if #gpus == 0 then return end
-   local ok, json = pcall(json_encode, gpus)
-   if not ok then
-      wezterm.log_warn('[gpu-adapter] encode failed: ' .. tostring(json))
-      return
-   end
-   if cached and json == json_encode(cached) then return end
-   local f = io.open(CACHE_FILE, 'w')
-   if not f then
-      wezterm.log_warn('[gpu-adapter] cannot write cache: ' .. CACHE_FILE)
-      return
-   end
-   f:write(json)
-   f:close()
-   wezterm.log_info('[gpu-adapter] cache updated (' .. #gpus .. ' adapter(s))')
-end
+local CACHE_FILE = 'gpu-cache.json'
 
 -- Fast path: load from disk cache so enumerate_gpus() is skipped at startup.
 -- On first launch (no cache), ENUMERATED_GPUS is empty and pick_best()/pick_manual()
 -- return nil — WezTerm auto-selects the GPU for this session.
-local _cached = read_cache()
-GpuAdapters.ENUMERATED_GPUS = _cached or {}
+local cached, read_err = state_file.read(CACHE_FILE)
+if read_err then
+   wezterm.log_warn('[gpu-adapter] ' .. read_err)
+end
+if type(cached) ~= 'table' or #cached == 0 then
+   cached = nil
+end
+GpuAdapters.ENUMERATED_GPUS = cached or {}
 
-if _cached then
-   wezterm.log_info('[gpu-adapter] loaded ' .. #_cached .. ' adapter(s) from cache')
+if cached then
+   wezterm.log_info('[gpu-adapter] loaded ' .. #cached .. ' adapter(s) from cache')
 else
    wezterm.log_info('[gpu-adapter] no cache — WezTerm will auto-select GPU this session')
 end
 
--- Background cache refresh: runs once per WezTerm session, 2 seconds after GUI starts.
+-- Background cache refresh, once per WezTerm session after the first window is up.
 -- Re-enumerates adapters and writes cache so the next launch uses the correct adapter.
--- Registered on every config evaluation: handlers belong to the current Lua state,
--- which is replaced on each (re)load, and gui-startup itself only fires once.
-wezterm.on('gui-startup', function()
-   wezterm.time.call_after(2, function()
-      local fresh = wezterm.gui.enumerate_gpus()
-      write_cache(fresh, _cached)
-   end)
+startup.defer('gpu-cache', function()
+   local fresh = wezterm.gui.enumerate_gpus()
+   if #fresh == 0 then
+      return
+   end
+   local changed, err = state_file.write(CACHE_FILE, fresh)
+   if err then
+      wezterm.log_warn('[gpu-adapter] cannot update cache: ' .. err)
+   elseif changed then
+      wezterm.log_info('[gpu-adapter] cache updated (' .. #fresh .. ' adapter(s))')
+   end
 end)
 
 ---@return GpuAdapters

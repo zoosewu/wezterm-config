@@ -16,8 +16,7 @@ require('utils.backdrops')
    :set_default_random()
 timing.log('backdrops set_images+set_default_random', _t)
 
-local _t = timing.now(); require('events.left-status').setup();  timing.log('left-status.setup()', _t)
-local _t = timing.now(); require('events.right-status').setup({ date_format = '%a %H:%M:%S' }); timing.log('right-status.setup()', _t)
+local _t = timing.now(); require('events.status').setup({ date_format = '%a %H:%M:%S' }); timing.log('status.setup()', _t)
 local _t = timing.now(); require('events.tab-title').setup({ hide_active_tab_unseen = false, unseen_icon = 'numbered_box' }); timing.log('tab-title.setup()', _t)
 local _t = timing.now(); require('events.new-tab-button').setup(); timing.log('new-tab-button.setup()', _t)
 local _t = timing.now(); require('events.gui-startup').setup(); timing.log('gui-startup.setup()', _t)
@@ -25,14 +24,6 @@ local _t = timing.now(); require('utils.font-installer').setup(); timing.log('fo
 
 local _t = timing.now(); require('utils.scratchpad').setup();     timing.log('scratchpad.setup()', _t)
 local _t = timing.now(); require('utils.session').setup();        timing.log('session.setup()', _t)
-local _t = timing.now(); require('utils.theme-switcher').setup(); timing.log('theme-switcher.setup()', _t)
-
--- Cleanup window-overrides state when a window is closed
-local wezterm_api = require('wezterm')
-local WinOverrides = require('utils.window-overrides')
-wezterm_api.on('window-closed', function(window)
-   WinOverrides.remove(window:window_id())
-end)
 
 local _t = timing.now()
 local cfg = Config:init()

@@ -5,6 +5,7 @@
 -- is used, so a missing font never triggers WezTerm's font error.
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
+local startup = require('utils.startup')
 
 ---@class FontSpec
 ---@field family string    font family name used in `wezterm.font()`
@@ -103,20 +104,15 @@ end
 
 ---Register the background download of missing fonts after GUI startup.
 function M.setup()
-   wezterm.on('gui-startup', function()
-      if #pending == 0 then
-         return
+   startup.defer('font-installer', function()
+      local installed = false
+      for _, spec in ipairs(pending) do
+         installed = download(spec) or installed
       end
-      wezterm.time.call_after(0, function()
-         local installed = false
-         for _, spec in ipairs(pending) do
-            installed = download(spec) or installed
-         end
-         pending = {}
-         if installed then
-            wezterm.reload_configuration()
-         end
-      end)
+      pending = {}
+      if installed then
+         wezterm.reload_configuration()
+      end
    end)
 end
 

@@ -20,6 +20,9 @@ local RESERVED_H = 130
 ---@param font_size number
 ---@return { width: integer, height: integer, position: table }|nil
 function M.for_active_screen(font_size)
+   if not wezterm.gui then
+      return nil -- mux server / CLI: no GUI screens
+   end
    local ok, screens = pcall(wezterm.gui.screens)
    if not ok or not screens or not screens.active then
       return nil

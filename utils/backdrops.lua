@@ -1,6 +1,9 @@
 local wezterm = require('wezterm')
 local colors = require('colors.custom')
-local WinOverrides = require('utils.window-overrides')
+local window_state = require('utils.window-state')
+
+-- per-window {current_idx, focus_on}; survives config reloads
+local states = window_state.namespace('backdrops', 'window')
 
 -- Seed random number generator
 -- Known issue with lua math library: first few values are not random enough
@@ -15,7 +18,6 @@ local GLOB_PATTERN = '*.{jpg,jpeg,png,gif,bmp,ico,tiff,pnm,dds,tga}'
 ---@field images_dir string directory containing backdrop images
 ---@field focus_color string background color for focus mode
 ---@field _default_idx number initial image index (used before any window exists)
----@field _window_states table<number, {current_idx: number, focus_on: boolean}>
 local BackDrops = {}
 BackDrops.__index = BackDrops
 
@@ -27,7 +29,6 @@ function BackDrops:init()
       images_dir = wezterm.config_dir .. '/backdrops/',
       focus_color = colors.background,
       _default_idx = 1,
-      _window_states = {},
    }
    return setmetatable(o, self)
 end
@@ -59,27 +60,44 @@ function BackDrops:set_focus(focus_color)
    return self
 end
 
----Set a random default image index (used at startup before any window exists)
+---Pick a random default image index, once per WezTerm process.
+---Kept in wezterm.GLOBAL so config reloads don't swap the wallpaper.
 function BackDrops:set_default_random()
-   if #self.images > 0 then
-      self._default_idx = math.random(#self.images)
+   local idx = wezterm.GLOBAL.backdrop_default_idx
+   if #self.images > 0 and not (idx and idx <= #self.images) then
+      idx = math.random(#self.images)
+      wezterm.GLOBAL.backdrop_default_idx = idx
    end
+   self._default_idx = idx or 1
    return self
 end
 
----Get or create per-window state
+---Get per-window state (a copy; persist changes with `_apply`)
 ---@private
 ---@param window any WezTerm Window
 ---@return {current_idx: number, focus_on: boolean}
 function BackDrops:_state(window)
-   local id = window:window_id()
-   if not self._window_states[id] then
-      self._window_states[id] = {
-         current_idx = self._default_idx,
-         focus_on = false,
-      }
+   return states:get(window:window_id()) or { current_idx = self._default_idx, focus_on = false }
+end
+
+---Persist per-window state and apply the matching background override
+---@private
+---@param window any WezTerm Window
+---@param state {current_idx: number, focus_on: boolean}
+function BackDrops:_apply(window, state)
+   states:set(window:window_id(), state)
+   local opts = state.focus_on and self:_focus_opts() or self:_img_opts(state.current_idx)
+   window_state.set_override(window, 'background', opts)
+end
+
+---@private
+---@return boolean
+function BackDrops:_has_images()
+   if #self.images == 0 then
+      wezterm.log_warn('BackDrops: no images found in ' .. self.images_dir)
+      return false
    end
-   return self._window_states[id]
+   return true
 end
 
 ---Build background options with the given image
@@ -137,29 +155,31 @@ end
 ---Select a random background for the given window
 ---@param window any WezTerm Window
 function BackDrops:random(window)
+   if not self:_has_images() then return end
    local state = self:_state(window)
-   state.current_idx = math.random(math.max(1, #self.images))
-   WinOverrides.set(window, 'background', self:_img_opts(state.current_idx))
+   state.current_idx = math.random(#self.images)
+   state.focus_on = false
+   self:_apply(window, state)
 end
 
 ---Cycle to the next background image
 ---@param window any WezTerm Window
 function BackDrops:cycle_forward(window)
+   if not self:_has_images() then return end
    local state = self:_state(window)
    state.current_idx = (state.current_idx % #self.images) + 1
-   WinOverrides.set(window, 'background', self:_img_opts(state.current_idx))
+   state.focus_on = false
+   self:_apply(window, state)
 end
 
 ---Cycle to the previous background image
 ---@param window any WezTerm Window
 function BackDrops:cycle_back(window)
+   if not self:_has_images() then return end
    local state = self:_state(window)
-   if state.current_idx == 1 then
-      state.current_idx = #self.images
-   else
-      state.current_idx = state.current_idx - 1
-   end
-   WinOverrides.set(window, 'background', self:_img_opts(state.current_idx))
+   state.current_idx = ((state.current_idx - 2) % #self.images) + 1
+   state.focus_on = false
+   self:_apply(window, state)
 end
 
 ---Set a specific background image by index
@@ -172,7 +192,8 @@ function BackDrops:set_img(window, idx)
    end
    local state = self:_state(window)
    state.current_idx = idx
-   WinOverrides.set(window, 'background', self:_img_opts(idx))
+   state.focus_on = false
+   self:_apply(window, state)
 end
 
 ---Toggle focus mode (show/hide background image)
@@ -180,8 +201,8 @@ end
 function BackDrops:toggle_focus(window)
    local state = self:_state(window)
    state.focus_on = not state.focus_on
-   local opts = state.focus_on and self:_focus_opts() or self:_img_opts(state.current_idx)
-   WinOverrides.set(window, 'background', opts)
+   if not state.focus_on and not self:_has_images() then return end
+   self:_apply(window, state)
 end
 
 ---Generate InputSelector choices for all loaded images

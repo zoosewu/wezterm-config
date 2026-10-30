@@ -7,6 +7,3 @@
 # auto-downloaded fonts (utils/font-installer.lua)
 /fonts/
 
-# per-machine GPU adapter cache (utils/gpu-adapter.lua)
-/gpu-cache.json
-/session.json

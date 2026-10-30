@@ -380,7 +380,9 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 
 | Keys                              | Action                                        |
 | --------------------------------- | --------------------------------------------- |
-| <kbd>SUPER_REV</kbd>+<kbd>s</kbd> | Save Session <sub>(records all tab CWDs)</sub> |
+| <kbd>SUPER_REV</kbd>+<kbd>s</kbd> | Save Session <sub>(records each tab's CWD, domain and custom title)</sub> |
+
+> Session 與 GPU 快取存在 config 目錄以外（Windows：`%LOCALAPPDATA%\wezterm-config`），避免寫檔觸發 config reload；可用環境變數 `WEZTERM_STATE_DIR` 覆寫位置。
 
 &nbsp;
 
@@ -437,6 +439,18 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | <kbd>Esc</kbd> | `PopKeyTable` <sub>(exit)</sub> |
 
 ---
+
+### Tests
+
+Headless（不開視窗）執行所有模組測試：
+
+```sh
+wezterm --config-file tests/run.lua ls-fonts --text a 2>&1 | grep "\[test\]"
+```
+
+最後一行應為 `[test] N/N passed`。
+
+&nbsp;
 
 ### References/Inspirations
 

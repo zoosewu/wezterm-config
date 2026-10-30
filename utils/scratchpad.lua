@@ -3,12 +3,13 @@
 -- Tracks scratchpad pane IDs per tab to allow toggle behaviour.
 local wezterm = require('wezterm')
 local cwd_util = require('utils.cwd')
+local window_state = require('utils.window-state')
 local act = wezterm.action
 
 local M = {}
 
--- per-tab scratchpad pane tracking: tab_id -> pane_id
-local _scratchpad_panes = {}
+-- per-tab {pane_id}; survives config reloads so toggle never spawns a duplicate
+local scratchpads = window_state.namespace('scratchpad', 'tab')
 
 ---Find a pane's 0-based index within its tab by pane_id
 ---@param tab any WezTerm MuxTab
@@ -27,7 +28,8 @@ M.setup = function()
    wezterm.on('scratchpad.toggle', function(window, pane)
       local tab = window:active_tab()
       local tab_id = tab:tab_id()
-      local scratch_id = _scratchpad_panes[tab_id]
+      local entry = scratchpads:get(tab_id)
+      local scratch_id = entry and entry.pane_id
 
       if scratch_id then
          local pane_idx = find_pane_index(tab, scratch_id)
@@ -48,7 +50,7 @@ M.setup = function()
             return
          else
             -- Pane was closed externally — clear stale entry
-            _scratchpad_panes[tab_id] = nil
+            scratchpads:set(tab_id, nil)
          end
       end
 
@@ -59,7 +61,7 @@ M.setup = function()
          cwd = cwd_util.get(pane),
       })
       if new_pane then
-         _scratchpad_panes[tab_id] = new_pane:pane_id()
+         scratchpads:set(tab_id, { pane_id = new_pane:pane_id() })
          wezterm.log_info('scratchpad: created pane ' .. tostring(new_pane:pane_id()) .. ' for tab ' .. tostring(tab_id))
       end
    end)

@@ -3,7 +3,20 @@ local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
 local cwd_util = require('utils.cwd')
 local keymap_help = require('utils.keymap-help')
+local domains = require('config.domains')
 local act = wezterm.action
+
+---Spawn action that inherits the current pane's cwd, translated for the target domain
+---@param spawn function act.SpawnCommandInNewTab | act.SpawnCommandInNewWindow | act.SplitVertical | ...
+---@param domain any SpawnCommand domain
+local function spawn_here(spawn, domain)
+   return wezterm.action_callback(function(window, pane)
+      window:perform_action(spawn({ domain = domain, cwd = cwd_util.for_domain(pane, domain) }), pane)
+   end)
+end
+
+-- First WSL domain for "new WSL tab"; falls back to the default domain where WSL is unavailable
+local WSL_DOMAIN = domains.wsl_domains[1] and { DomainName = domains.wsl_domains[1].name } or 'DefaultDomain'
 
 local mod = {}
 
@@ -62,32 +75,8 @@ local keys = {
 
    -- tabs --
    -- tabs: spawn+close
-   {
-      key = 't',
-      mods = mod.SUPER,
-      action = wezterm.action_callback(function(window, pane)
-         window:perform_action(
-            act.SpawnCommandInNewTab({
-               domain = 'DefaultDomain',
-               cwd = cwd_util.get_local(pane),
-            }),
-            pane
-         )
-      end),
-   },
-   {
-      key = 't',
-      mods = mod.SUPER_REV,
-      action = wezterm.action_callback(function(window, pane)
-         window:perform_action(
-            act.SpawnCommandInNewTab({
-               domain = { DomainName = 'wsl:ubuntu-fish' },
-               cwd = cwd_util.to_wsl(cwd_util.get(pane)),
-            }),
-            pane
-         )
-      end),
-   },
+   { key = 't',          mods = mod.SUPER,     action = spawn_here(act.SpawnCommandInNewTab, 'DefaultDomain') },
+   { key = 't',          mods = mod.SUPER_REV, action = spawn_here(act.SpawnCommandInNewTab, WSL_DOMAIN) },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- tabs: navigation
@@ -112,19 +101,7 @@ local keys = {
 
    -- window --
    -- window: spawn windows
-   {
-      key = 'n',
-      mods = mod.SUPER,
-      action = wezterm.action_callback(function(window, pane)
-         window:perform_action(
-            act.SpawnCommandInNewWindow({
-               domain = 'DefaultDomain',
-               cwd = cwd_util.get_local(pane),
-            }),
-            pane
-         )
-      end),
-   },
+   { key = 'n', mods = mod.SUPER, action = spawn_here(act.SpawnCommandInNewWindow, 'DefaultDomain') },
 
    -- window: zoom window
    {
@@ -217,32 +194,8 @@ local keys = {
 
    -- panes --
    -- panes: split panes
-   {
-      key = [[\]],
-      mods = mod.SUPER,
-      action = wezterm.action_callback(function(window, pane)
-         window:perform_action(
-            act.SplitVertical({
-               domain = 'CurrentPaneDomain',
-               cwd = cwd_util.get(pane),
-            }),
-            pane
-         )
-      end),
-   },
-   {
-      key = [[\]],
-      mods = mod.SUPER_REV,
-      action = wezterm.action_callback(function(window, pane)
-         window:perform_action(
-            act.SplitHorizontal({
-               domain = 'CurrentPaneDomain',
-               cwd = cwd_util.get(pane),
-            }),
-            pane
-         )
-      end),
-   },
+   { key = [[\]], mods = mod.SUPER,     action = spawn_here(act.SplitVertical, 'CurrentPaneDomain') },
+   { key = [[\]], mods = mod.SUPER_REV, action = spawn_here(act.SplitHorizontal, 'CurrentPaneDomain') },
 
    -- panes: zoom+close pane
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },

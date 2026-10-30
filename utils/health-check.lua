@@ -4,6 +4,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local timing = require('utils.timing')
+local startup = require('utils.startup')
 
 local M = {}
 
@@ -108,11 +109,9 @@ local function _run()
    timing.log('=== health-check _run() total ===', _T, 'timing/health')
 end
 
----Register health check to run after gui-startup (non-blocking).
+---Register health check to run after the first window is shown (non-blocking).
 function M.run()
-   wezterm.on('gui-startup', function()
-      _run()
-   end)
+   startup.defer('health-check', _run)
 end
 
 return M

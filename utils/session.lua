@@ -1,74 +1,92 @@
 -- utils/session.lua
--- Save and restore tab layout (CWD per tab) across WezTerm restarts.
+-- Save and restore tab layout (cwd, domain, manual title per tab) across WezTerm restarts.
 -- Save: triggered by the 'session.save' event (keybinding SUPER_REV + s).
 -- Restore: orchestrated in gui-startup (see events/gui-startup.lua).
 local wezterm = require('wezterm')
+local cwd_util = require('utils.cwd')
+local state_file = require('utils.state-file')
 
 local M = {}
 
-local SESSION_FILE = wezterm.config_dir .. '/session.json'
+local SESSION_FILE = 'session.json'
 
--- Stable builds only have json_parse; nightly moved it to wezterm.serde
-local json_decode = wezterm.json_parse or (wezterm.serde and wezterm.serde.json_decode)
+---@class SessionTab
+---@field cwd string|nil
+---@field domain string|nil domain name ('local' for the default domain)
+---@field title string|nil manually set tab title ('' / nil when none)
 
----Serialize the current window's tab CWDs to a JSON file
----@param window any WezTerm Window
+---Serialize the current window's tabs to the session file
+---@param window any WezTerm GuiWindow
 function M.save(window)
+   ---@type SessionTab[]
    local tabs_data = {}
-
-   for _, tab in ipairs(window:tabs()) do
-      local active_pane = tab:active_pane()
-      local cwd_uri = active_pane:get_current_working_dir()
+   for _, tab in ipairs(window:mux_window():tabs()) do
+      local pane = tab:active_pane()
       table.insert(tabs_data, {
-         cwd = cwd_uri and cwd_uri.file_path or nil,
+         cwd = cwd_util.get(pane),
+         domain = pane:get_domain_name(),
          title = tab:get_title(),
       })
    end
 
-   local ok, json = pcall(wezterm.json_encode, tabs_data)
-   if not ok then
-      wezterm.log_error('session.save: json_encode failed: ' .. tostring(json))
+   local _, err = state_file.write(SESSION_FILE, tabs_data)
+   if err then
+      wezterm.log_error('session.save: ' .. err)
       return
    end
-
-   local f, err = io.open(SESSION_FILE, 'w')
-   if not f then
-      wezterm.log_error('session.save: cannot write to ' .. SESSION_FILE .. ': ' .. tostring(err))
-      return
-   end
-   f:write(json)
-   f:close()
-   wezterm.log_info('session.save: saved ' .. #tabs_data .. ' tab(s) to ' .. SESSION_FILE)
+   wezterm.log_info('session.save: saved ' .. #tabs_data .. ' tab(s) to ' .. state_file.path(SESSION_FILE))
 end
 
 ---Load saved session data from disk.
----Returns nil if no session file exists or it is malformed.
----@return table|nil tabs_data array of {cwd, title} entries
+---@return SessionTab[]|nil nil if no session file exists or it is malformed
 function M.load()
-   local f = io.open(SESSION_FILE, 'r')
-   if not f then return nil end
-
-   local content = f:read('*a')
-   f:close()
-
-   local ok, tabs_data = pcall(json_decode, content)
-   if not ok or type(tabs_data) ~= 'table' or #tabs_data == 0 then
-      wezterm.log_warn('session.restore: invalid or empty session file, skipping')
+   local tabs_data, err = state_file.read(SESSION_FILE)
+   if err then
+      wezterm.log_warn('session.restore: ' .. err)
+   end
+   if type(tabs_data) ~= 'table' or #tabs_data == 0 then
       return nil
    end
    return tabs_data
 end
 
----Spawn tabs 2+ from saved session data into an existing MuxWindow.
----Tab 1's CWD must already be handled by the caller (via spawn_window cwd).
----@param mux_window any WezTerm MuxWindow
----@param tabs_data table return value from M.load()
-function M.restore_remaining(mux_window, tabs_data)
-   for i = 2, #tabs_data do
-      mux_window:spawn_tab({ cwd = tabs_data[i].cwd })
+---Spawn fields (cwd + domain) for a saved tab. Unknown domains fall back to the default.
+---@param entry SessionTab
+---@return table SpawnCommand fields
+function M.spawn_args(entry)
+   local args = { cwd = entry.cwd }
+   if entry.domain and entry.domain ~= 'local' then
+      if wezterm.mux.get_domain(entry.domain) then
+         args.domain = { DomainName = entry.domain }
+      else
+         wezterm.log_warn('session.restore: domain "' .. entry.domain .. '" no longer exists, using default')
+         args.cwd = nil -- a path from another domain is meaningless here
+      end
    end
-   -- Return focus to first tab
+   return args
+end
+
+---Apply saved state to tab 1 and spawn tabs 2+ into an existing MuxWindow.
+---Tab 1's cwd/domain must already be handled by the caller (via spawn_window).
+---@param mux_window any WezTerm MuxWindow
+---@param tabs_data SessionTab[] return value from M.load()
+function M.restore_remaining(mux_window, tabs_data)
    local tabs = mux_window:tabs()
+   if tabs[1] and tabs_data[1].title and tabs_data[1].title ~= '' then
+      tabs[1]:set_title(tabs_data[1].title)
+   end
+
+   for i = 2, #tabs_data do
+      local ok, tab = pcall(function()
+         return mux_window:spawn_tab(M.spawn_args(tabs_data[i]))
+      end)
+      if not ok then
+         wezterm.log_warn('session.restore: cannot restore tab ' .. i .. ': ' .. tostring(tab))
+      elseif tabs_data[i].title and tabs_data[i].title ~= '' then
+         tab:set_title(tabs_data[i].title)
+      end
+   end
+
    if tabs[1] then
       tabs[1]:activate()
    end
