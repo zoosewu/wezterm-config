@@ -2,6 +2,7 @@ local wezterm = require('wezterm')
 local mux = wezterm.mux
 local session = require('utils.session')
 local timing = require('utils.timing')
+local window_geometry = require('utils.window-geometry')
 
 local M = {}
 
@@ -17,6 +18,14 @@ M.setup = function()
       local spawn_cmd = cmd or {}
       if first_cwd then
          spawn_cmd.cwd = first_cwd
+      end
+
+      -- Spawn at near full-screen size so maximize() doesn't visibly resize (startup flash)
+      local geometry = window_geometry.for_active_screen(require('config.fonts').font_size)
+      for k, v in pairs(geometry or {}) do
+         if spawn_cmd[k] == nil then
+            spawn_cmd[k] = v
+         end
       end
 
       local _t = timing.now()

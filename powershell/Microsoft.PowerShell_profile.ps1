@@ -87,7 +87,7 @@ function Show-WeztermHelp {
     header '功能鍵'
     row3 'F1'           'Copy Mode'         'F2'            'Command Palette'    'F3'            'Launcher'
     row3 'F4'           'Launcher (Tabs)'   'F5'            'Launcher (WS)'      'F11'           'Toggle FullScreen'
-    row3 'F12'          'Debug Overlay'     ''              ''                   ''              ''
+    row3 'F12'          'Debug Overlay'     'SUPER+F1'      '快捷鍵速查'         ''              ''
 
     header '常用操作'
     row3 'SUPER+f'      '搜尋文字'          'SUPER_REV+u'   '開啟 URL'           'Ctrl+Shift+C'  '複製'

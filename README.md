@@ -194,6 +194,10 @@
   - <details>
     <summary>JetBrainsMono Nerd Font</summary>
 
+    > 可選：若系統未安裝，啟動時會先以 WezTerm 內建的 `JetBrains Mono` 顯示（不跳錯誤），
+    > 並於背景以 `curl` 自動下載 Medium / Bold（含 Italic）至 `fonts/`（已 gitignore），
+    > 完成後自動 reload 套用。詳見 `utils/font-installer.lua`。
+
     Install with Homebrew (Macos)
 
     ```sh
@@ -259,6 +263,7 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | <kbd>F5</kbd>                     | `ShowLauncher` <sub>(workspaces only)</sub> |
 | <kbd>F11</kbd>                    | `ToggleFullScreen`                          |
 | <kbd>F12</kbd>                    | `ShowDebugOverlay`                          |
+| <kbd>SUPER</kbd>+<kbd>F1</kbd>    | 快捷鍵速查 <sub>(可搜尋，Enter 直接執行)</sub> |
 | <kbd>SUPER</kbd>+<kbd>f</kbd>     | Search Text                                 |
 | <kbd>SUPER_REV</kbd>+<kbd>u</kbd> | Open URL                                    |
 

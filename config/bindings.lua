@@ -2,6 +2,7 @@ local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
 local cwd_util = require('utils.cwd')
+local keymap_help = require('utils.keymap-help')
 local act = wezterm.action
 
 local mod = {}
@@ -28,6 +29,7 @@ local keys = {
    },
    { key = 'F11', mods = 'NONE',    action = act.ToggleFullScreen },
    { key = 'F12', mods = 'NONE',    action = act.ShowDebugOverlay },
+   { key = 'F1',  mods = mod.SUPER, action = keymap_help.show },
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
       key = 'u',

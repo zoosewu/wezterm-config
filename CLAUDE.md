@@ -29,8 +29,10 @@ events/
 utils/
   backdrops.lua        # 背景圖片管理（per-window 狀態、隨機 / 循環 / Fuzzy / focus）
   cells.lua            # 狀態列 cell 工具
+  font-installer.lua   # 缺少字型時先用內建 fallback，背景自動下載至 fonts/ 後 reload
   gpu-adapter.lua      # WebGPU 最佳 GPU+API 自動選擇器（磁碟快取加速啟動）
   health-check.lua     # 啟動自我診斷（F12 Debug Overlay 查看）
+  keymap-help.lua      # 快捷鍵速查（SUPER+F1），清單由 bindings.lua 自動產生，中文說明在此維護
   math.lua             # 數學工具
   opts-validator.lua   # 選項型別驗證
   platform.lua         # 平台偵測（is_mac / is_win / is_linux）
@@ -39,6 +41,7 @@ utils/
   theme-switcher.lua   # 自動深/淺色主題切換（Catppuccin Mocha / Latte）
   timing.lua           # 啟動計時工具（timing.ENABLED = true 開啟）
   window-overrides.lua # 集中式 per-window config override 管理器
+  window-geometry.lua  # 估算接近全螢幕的初始視窗大小，避免 maximize 造成啟動閃爍
 colors/
   custom.lua           # Catppuccin Mocha 深色主題
   catppuccin-latte.lua # Catppuccin Latte 淺色主題
@@ -68,7 +71,7 @@ backdrops/             # 背景圖片資源
 - **欄位寬度**：key = 15 display chars、desc = 19 display chars
 - **欄間距**：4 個空格（約 1.4 倍字元間距）
 - **對齊方式**：必須使用 CJK 雙寬字元感知的 `Get-DispWidth` + `Pad` 函式補齊，禁止直接使用 PowerShell 的 `-f` 格式化（CJK 字元計 2 寬，`-f` 不感知導致歪掉）
-- 每次 `config/bindings.lua` 有異動時，需同步更新 PS profile 中對應的快捷鍵資料
+- 每次 `config/bindings.lua` 有異動時，需同步更新 PS profile 中對應的快捷鍵資料，以及 `utils/keymap-help.lua` 的 `SECTIONS` 中文說明（未加說明的綁定會顯示在「其他」並列出 action 名稱）
 
 ---
 

@@ -8,6 +8,9 @@ local M = {}
 
 local SESSION_FILE = wezterm.config_dir .. '/session.json'
 
+-- Stable builds only have json_parse; nightly moved it to wezterm.serde
+local json_decode = wezterm.json_parse or (wezterm.serde and wezterm.serde.json_decode)
+
 ---Serialize the current window's tab CWDs to a JSON file
 ---@param window any WezTerm Window
 function M.save(window)
@@ -48,7 +51,7 @@ function M.load()
    local content = f:read('*a')
    f:close()
 
-   local ok, tabs_data = pcall(wezterm.json_decode, content)
+   local ok, tabs_data = pcall(json_decode, content)
    if not ok or type(tabs_data) ~= 'table' or #tabs_data == 0 then
       wezterm.log_warn('session.restore: invalid or empty session file, skipping')
       return nil
