@@ -1,11 +1,14 @@
 -- utils/font-installer.lua
 -- Makes sure configured fonts exist. A missing font is downloaded in the background
--- (after the first window is shown) into `<config_dir>/fonts`, which is loaded via
--- `font_dirs`, then the config is reloaded. Until then a font bundled with WezTerm
--- is used, so a missing font never triggers WezTerm's font error.
+-- (after the first window is shown) into `<state dir>/fonts` (see utils/state-file),
+-- which is loaded via `font_dirs`, then the config is reloaded once. Until then a font
+-- bundled with WezTerm is used, so a missing font never triggers WezTerm's font error.
+-- The state dir is outside the watched config dir, so the download itself does not
+-- trigger reloads (or a reload mid-download).
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local startup = require('utils.startup')
+local state_file = require('utils.state-file')
 
 ---@class FontSpec
 ---@field family string    font family name used in `wezterm.font()`
@@ -15,7 +18,7 @@ local startup = require('utils.startup')
 
 local M = {}
 
-M.FONT_DIR = wezterm.config_dir .. '/fonts'
+M.FONT_DIR = state_file.DIR .. '/fonts'
 
 ---@type FontSpec[]
 local pending = {}

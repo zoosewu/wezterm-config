@@ -18,15 +18,7 @@ end
 -- First WSL domain for "new WSL tab"; falls back to the default domain where WSL is unavailable
 local WSL_DOMAIN = domains.wsl_domains[1] and { DomainName = domains.wsl_domains[1].name } or 'DefaultDomain'
 
-local mod = {}
-
-if platform.is_mac then
-   mod.SUPER = 'SUPER'
-   mod.SUPER_REV = 'SUPER|CTRL'
-elseif platform.is_win or platform.is_linux then
-   mod.SUPER = 'ALT' -- to not conflict with Windows key shortcuts
-   mod.SUPER_REV = 'ALT|CTRL'
-end
+local mod = platform.mods
 
 -- stylua: ignore
 local keys = {

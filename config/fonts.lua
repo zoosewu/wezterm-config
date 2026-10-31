@@ -4,7 +4,7 @@ local font_installer = require('utils.font-installer')
 
 -- local font_family = 'Maple Mono NF'
 -- local font_family = 'CartographCF Nerd Font'
--- Auto-downloaded to `fonts/` if not installed (see utils/font-installer.lua)
+-- Auto-downloaded if not installed (see utils/font-installer.lua)
 local font_family = font_installer.ensure({
    family = 'JetBrainsMono Nerd Font',
    fallback = 'JetBrains Mono', -- bundled with WezTerm

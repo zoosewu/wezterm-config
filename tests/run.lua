@@ -142,6 +142,23 @@ do
    os.remove(state_file.path('t.json'))
 end
 
+-- ------------------------------------------- state never lives in the repo
+do
+   local function outside_repo(path)
+      local norm = function(p) return p:gsub('\\', '/'):lower() end
+      local root = norm(ROOT == './' and wezterm.config_dir:gsub('[/\\]tests$', '') or ROOT)
+      return norm(path):sub(1, #root) ~= root
+   end
+   eq('state-file.DIR outside repo', outside_repo(require('utils.state-file').DIR), true)
+   eq('font-installer.FONT_DIR outside repo', outside_repo(require('utils.font-installer').FONT_DIR), true)
+end
+
+-- ---------------------------------------------------------- utils.platform
+do
+   local platform = require('utils.platform')
+   eq('platform.mods.SUPER_REV extends SUPER', platform.mods.SUPER_REV, platform.mods.SUPER .. '|CTRL')
+end
+
 -- ------------------------------------------------- whole config must load
 do
    local ok, err = pcall(dofile, ROOT .. 'wezterm.lua')

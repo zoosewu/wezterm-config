@@ -8,8 +8,8 @@ local act = wezterm.action
 
 local M = {}
 
-local SUPER = platform.is_mac and 'SUPER' or 'ALT'
-local SUPER_REV = SUPER .. '|CTRL'
+local SUPER = platform.mods.SUPER
+local SUPER_REV = platform.mods.SUPER_REV
 
 -- stylua: ignore
 local SECTIONS = {

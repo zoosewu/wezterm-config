@@ -195,7 +195,7 @@
     <summary>JetBrainsMono Nerd Font</summary>
 
     > 可選：若系統未安裝，啟動時會先以 WezTerm 內建的 `JetBrains Mono` 顯示（不跳錯誤），
-    > 並於背景以 `curl` 自動下載 Medium / Bold（含 Italic）至 `fonts/`（已 gitignore），
+    > 並於背景以 `curl` 自動下載 Medium / Bold（含 Italic）至 state 目錄的 `fonts/`（Windows：`%LOCALAPPDATA%\wezterm-config\fonts`），
     > 完成後自動 reload 套用。詳見 `utils/font-installer.lua`。
 
     Install with Homebrew (Macos)

@@ -4,6 +4,4 @@
 /.luarocks
 .DS_Store
 
-# auto-downloaded fonts (utils/font-installer.lua)
-/fonts/
 

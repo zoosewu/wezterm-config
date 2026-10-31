@@ -72,3 +72,16 @@
 ### Review
 - 相對 / 絕對路徑執行皆 33/33 通過
 - 突變測試：放回 is_admin bug → `FAIL tab-title plain tab has no admin icon`（32/33），已還原
+
+## 8. 收尾（子代理報告剩餘項目）
+- [x] 字型改下載到 state 目錄（config 目錄外）：下載不再觸發多次 reload，repo 不再有 `fonts/`
+- [x] SUPER / SUPER_REV 對應移到 `platform.mods`，bindings 與 keymap-help 共用
+- [x] health-check 改讀 backdrops 已載入的清單，不再重複 glob
+- [x] tests 補 3 項（state / font 目錄在 repo 外、mods 一致），共 36 項
+- 不處理：淺色主題 tab bar 配色（titlebar 固定 `#090909`，兩種主題下 tab bar 都是深色，現有配色正確）
+- 不處理：session 只存目前視窗（多視窗還原複雜度高、效益低）
+
+### Review
+- 字型下載實測：config 求值 3 次（啟動 2 + 下載完成 1），config 目錄無寫入，切換為 Nerd Font
+- 突變測試：FONT_DIR 指回 repo → 相對 / 絕對路徑執行皆 FAIL，已還原
+- GUI 冒煙測試：health 10 項通過、快捷鍵速查開啟、無 WARN / ERROR

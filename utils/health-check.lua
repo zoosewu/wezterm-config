@@ -65,15 +65,15 @@ local function _run()
 
    -- Check backdrops directory
    local _t = timing.now()
-   local backdrops_dir = wezterm.config_dir .. '/backdrops/'
-   local backdrop_files = wezterm.glob(backdrops_dir .. '*.{jpg,jpeg,png,gif,bmp,ico,tiff,pnm,dds,tga}')
-   if #backdrop_files > 0 then
+   -- reuse the list backdrops already globbed at config load instead of globbing again
+   local backdrops = require('utils.backdrops')
+   if #backdrops.images > 0 then
       ok_count = ok_count + 1
-      wezterm.log_info('[health] ✓ backdrops: ' .. #backdrop_files .. ' image(s) found')
+      wezterm.log_info('[health] ✓ backdrops: ' .. #backdrops.images .. ' image(s) found')
    else
-      wezterm.log_warn('[health] ⚠ backdrops: no images found in ' .. backdrops_dir)
+      wezterm.log_warn('[health] ⚠ backdrops: no images found in ' .. backdrops.images_dir)
    end
-   timing.log('backdrops glob', _t, 'timing/health')
+   timing.log('backdrops check', _t, 'timing/health')
 
    -- Check Nerd Font icons (basic availability test)
    local _t = timing.now()
