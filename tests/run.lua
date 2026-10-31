@@ -159,6 +159,81 @@ do
    eq('platform.mods.SUPER_REV extends SUPER', platform.mods.SUPER_REV, platform.mods.SUPER .. '|CTRL')
 end
 
+-- ------------------------------------------------------------ utils.updater
+-- Real git repos in a temp dir: remote (bare) <- author clone, config clone checks it
+do
+   local updater = require('utils.updater')
+   local is_win = require('utils.platform').is_win
+   local base = (os.getenv('TEMP') or os.getenv('TMPDIR') or '/tmp'):gsub('\\', '/') .. '/wezterm-config-test-updater'
+   local function sh(...)
+      local ok, success, _, stderr = pcall(wezterm.run_child_process, { ... })
+      if not (ok and success) then
+         error('[test] command failed: ' .. table.concat({ ... }, ' ') .. ': ' .. tostring(ok and stderr or success))
+      end
+   end
+   local function rm_base()
+      pcall(wezterm.run_child_process, is_win and { 'cmd.exe', '/c', 'rmdir', '/s', '/q', (base:gsub('/', '\\')) }
+         or { 'rm', '-rf', base })
+   end
+   rm_base()
+   sh(table.unpack(is_win and { 'cmd.exe', '/c', 'mkdir', (base:gsub('/', '\\')) } or { 'mkdir', '-p', base }))
+   local remote, author, config = base .. '/remote.git', base .. '/author', base .. '/config'
+   local id = { '-c', 'user.name=t', '-c', 'user.email=t@t' }
+   local function commit(dir, file, text)
+      local f = assert(io.open(dir .. '/' .. file, 'w'))
+      f:write(text)
+      f:close()
+      sh('git', '-C', dir, 'add', file)
+      sh('git', '-C', dir, id[1], id[2], id[3], id[4], 'commit', '-q', '-m', file)
+   end
+   local function read(path)
+      local f = io.open(path, 'r')
+      if not f then return nil end
+      local s = f:read('*a')
+      f:close()
+      return s
+   end
+
+   eq('updater non-repo', (updater.check({ dir = base, force = true })), 'not-repo')
+   sh('git', 'init', '-q', '--bare', '-b', 'main', remote)
+   sh('git', 'clone', '-q', remote, author)
+   sh('git', '-C', author, 'checkout', '-q', '-b', 'main')
+   commit(author, 'a.lua', 'v1')
+   sh('git', '-C', author, 'push', '-q', '-u', 'origin', 'main')
+   sh('git', 'clone', '-q', '-b', 'main', remote, config)
+
+   eq('updater up-to-date', (updater.check({ dir = config, force = true })), 'up-to-date')
+   commit(author, 'a.lua', 'v2')
+   sh('git', '-C', author, 'push', '-q')
+   eq('updater throttled', (updater.check({ dir = config })), 'throttled')
+   eq('updater fast-forward', (updater.check({ dir = config, force = true })), 'updated')
+   eq('updater file updated', read(config .. '/a.lua'), 'v2')
+
+   commit(author, 'a.lua', 'v3')
+   sh('git', '-C', author, 'push', '-q')
+   local f = assert(io.open(config .. '/a.lua', 'w'))
+   f:write('local edit')
+   f:close()
+   eq('updater dirty skipped', (updater.check({ dir = config, force = true })), 'dirty')
+   eq('updater keeps local edit', read(config .. '/a.lua'), 'local edit')
+   sh('git', '-C', config, 'checkout', '-q', '--', '.')
+
+   commit(config, 'b.lua', 'mine')
+   eq('updater diverged skipped', (updater.check({ dir = config, force = true })), 'diverged')
+
+   -- user-chosen repo: a clone without upstream follows `repo` + `branch`
+   local own = base .. '/own'
+   sh('git', 'clone', '-q', '-b', 'main', remote, own)
+   sh('git', '-C', own, 'branch', '-q', '--unset-upstream')
+   eq('updater no upstream', (updater.check({ dir = own, force = true })), 'no-upstream')
+   commit(author, 'a.lua', 'v4')
+   sh('git', '-C', author, 'push', '-q')
+   eq('updater repo+branch fast-forward', (updater.check({ dir = own, repo = remote, branch = 'main', force = true })), 'updated')
+   eq('updater repo file updated', read(own .. '/a.lua'), 'v4')
+   eq('updater repo HEAD up-to-date', (updater.check({ dir = own, repo = remote, force = true })), 'up-to-date')
+   rm_base()
+end
+
 -- ------------------------------------------------- whole config must load
 do
    local ok, err = pcall(dofile, ROOT .. 'wezterm.lua')

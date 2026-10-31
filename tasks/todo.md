@@ -85,3 +85,17 @@
 - 字型下載實測：config 求值 3 次（啟動 2 + 下載完成 1），config 目錄無寫入，切換為 Nerd Font
 - 突變測試：FONT_DIR 指回 repo → 相對 / 絕對路徑執行皆 FAIL，已還原
 - GUI 冒煙測試：health 10 項通過、快捷鍵速查開啟、無 WARN / ERROR
+
+## 9. 自動更新（utils/updater.lua）
+- [x] 啟動後（startup.defer）檢查 config 目錄：git repo + 有 upstream 才處理
+- [x] 間隔節流（預設 6 小時，存 state 目錄 `updater.json`，跨 process 共用）；F2「Config: 檢查更新」強制檢查
+- [x] fetch 不等待互動輸入（`credential.interactive=never`、SSH `BatchMode=yes`、HTTP 低速逾時）
+- [x] 只在 behind > 0、無本地 commit、工作目錄乾淨（`core.fileMode=false`，忽略權限變更）時 `merge --ff-only`
+- [x] 更新 / 略過時 toast + log；merge 改寫 config 目錄 → WezTerm 自動 reload
+- [x] tests：暫存 bare remote + 兩個 clone，涵蓋 not-repo / up-to-date / throttled / updated / dirty / diverged（共 44 項）
+- [x] 可選更新來源：`setup({ repo, branch, interval_hours, enabled })`；`repo` 為 URL / 路徑 / remote 名，fetch 後以 FETCH_HEAD 比較；未設定時沿用 upstream
+- [x] tests 補 4 項：無 upstream 時略過、指定 repo+branch 拉取、指定 repo 預設分支（共 48 項）
+
+### Review
+- headless 44/44；突變測試（移除 dirty 檢查）→ FAIL，已還原
+- GUI 實測：落後 1 commit 的暫存 clone 當 config 目錄 → 啟動約 4 秒後 `updated 1 commit(s) from origin/main`，檔案更新為 v2，config 自動重新求值

@@ -77,6 +77,29 @@
   >
   > bash / zsh / fish 通常已內建 OSC 7 支援，無須額外設定。
 
+- [**Auto Update**](./utils/updater.lua)
+
+  若 config 目錄是 git clone，WezTerm 啟動後會在背景 `git fetch` 更新來源（最多每 6 小時一次），
+  有新 commit 時以 fast-forward 拉取，WezTerm 偵測到檔案變動會自動 reload，並跳出通知。
+
+  在 [`wezterm.lua`](./wezterm.lua) 的 `updater.setup()` 選擇要追蹤的 repo：
+
+  ```lua
+  require('utils.updater').setup({
+     repo = 'git@github.com:<you>/wezterm-config.git', -- nil = 跟隨 clone 的 upstream
+     branch = 'master',                                -- nil = repo 的預設分支
+     interval_hours = 6,                               -- 自動檢查的最短間隔
+     enabled = true,                                   -- false = 關閉啟動時檢查
+  })
+  ```
+
+  `repo` 可以是 URL、本機路徑或 remote 名稱（如 `'origin'`），適合 fork 後追蹤自己的 repo。
+
+  - 有未提交的改動（只改檔案權限不算）或本地 commit 時**不會動任何檔案**，只通知略過
+  - fetch 不會等待密碼 / passphrase 輸入（SSH 用 `BatchMode`），失敗只記在 log（<kbd>F12</kbd>）
+  - Command Palette（<kbd>F2</kbd>）→ `Config: 檢查更新` 可立即檢查（忽略間隔）
+  - 非 git 目錄或分支沒有 upstream 時自動略過
+
 ---
 
 ### Getting Started

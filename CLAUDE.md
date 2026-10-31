@@ -41,6 +41,7 @@ utils/
   session.lua          # Session 持久化（儲存 / 還原 tab 的 cwd、domain、自訂標題）
   theme-switcher.lua   # 依系統深/淺色選擇配色（Catppuccin Mocha / Latte；外觀改變時 WezTerm 會自動 reload）
   timing.lua           # 啟動計時工具（timing.ENABLED = true 開啟）
+  updater.lua          # 自動更新：config 目錄為 git clone 時背景 fetch（來源可在 wezterm.lua 設 repo / branch，預設 upstream），乾淨且無本地 commit 才 fast-forward（F2 →「Config: 檢查更新」）
   window-geometry.lua  # 估算接近全螢幕的初始視窗大小，避免 maximize 造成啟動閃爍
   window-state.lua     # 跨 reload 保留的 per-window/per-tab 狀態（set_override、namespace），所有 override 都經由這裡
 colors/
