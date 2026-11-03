@@ -1,6 +1,7 @@
 -- utils/keymap-help.lua
 -- Searchable keybinding cheat sheet (InputSelector), generated from config/bindings.lua
--- so it never drifts from the real bindings. Selecting a row runs that binding.
+-- so it never drifts from the real bindings. Two bindings per row (same section) to use
+-- the width; fuzzy search matches either one.
 -- Descriptions below are display-only; bindings without one fall back to the action name.
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
@@ -59,9 +60,12 @@ local SECTIONS = {
 
 local KEY_NAMES = { LeftArrow = '←', RightArrow = '→', UpArrow = '↑', DownArrow = '↓', Backspace = 'BS' }
 
-local COLORS = { section = '#cba6f7', key = '#f9e2af', desc = '#cdd6f4', action = '#6c7086' }
+local COLORS = { section = '#cba6f7', key = '#f9e2af', desc = '#cdd6f4', sep = '#45475a' }
+local COLUMNS = 2
 local SECTION_W = 12
-local KEY_W = 18
+local KEY_W = 17
+local DESC_W = 24
+local GAP = '  │  '
 
 ---Display width aware of CJK double-width characters
 ---@param s string
@@ -71,11 +75,15 @@ local function width(s)
    return ok and w or utf8.len(s) or #s
 end
 
+---Truncate to `w` columns, then pad to exactly `w`
 ---@param s string
 ---@param w integer
 ---@return string
-local function pad(s, w)
-   return s .. string.rep(' ', math.max(1, w - width(s)))
+local function fit(s, w)
+   if width(s) > w then
+      s = wezterm.truncate_right(s, w - 1) .. '…'
+   end
+   return s .. string.rep(' ', math.max(0, w - width(s)))
 end
 
 ---Normalize a binding to the same notation used by the PS profile cheat sheet
@@ -105,29 +113,34 @@ local function action_name(action)
    return (s:gsub('%s+', ' '))
 end
 
+---One row: the section name, then up to COLUMNS { key, desc } cells
 ---@param section string
----@param key string
----@param desc string
----@param detail string|nil
+---@param cells { [1]: string, [2]: string }[]
 ---@return string
-local function label(section, key, desc, detail)
-   return wezterm.format({
+local function label(section, cells)
+   local items = {
       { Foreground = { Color = COLORS.section } },
-      { Text = pad(section, SECTION_W) },
-      { Foreground = { Color = COLORS.key } },
-      { Text = pad(key, KEY_W) },
-      { Foreground = { Color = COLORS.desc } },
-      { Text = desc },
-      { Foreground = { Color = COLORS.action } },
-      { Text = detail and ('  ' .. detail) or '' },
-   })
+      { Text = fit(section, SECTION_W) },
+   }
+   for i, cell in ipairs(cells) do
+      if i > 1 then
+         table.insert(items, { Foreground = { Color = COLORS.sep } })
+         table.insert(items, { Text = GAP })
+      end
+      table.insert(items, { Foreground = { Color = COLORS.key } })
+      table.insert(items, { Text = fit(cell[1], KEY_W) })
+      table.insert(items, { Foreground = { Color = COLORS.desc } })
+      -- no trailing padding after the last cell
+      table.insert(items, { Text = i < #cells and fit(cell[2], DESC_W) or cell[2] })
+   end
+   return wezterm.format(items)
 end
 
----Build selector rows. `id` indexes into `runnable` for top-level keys, '' otherwise.
----@return table choices, table runnable
+---Build selector rows, grouped by section, COLUMNS bindings per row
+---@return table choices
 local function build()
    local bindings = require('config.bindings')
-   local by_combo, runnable, choices, seen = {}, {}, {}, {}
+   local by_combo, seen = {}, {}
 
    for _, b in ipairs(bindings.keys or {}) do
       by_combo[combo(b)] = b
@@ -138,25 +151,24 @@ local function build()
       end
    end
 
-   local function add(section, key, desc)
+   ---@type { [1]: string, [2]: { [1]: string, [2]: string }[] }[]
+   local groups = {}
+   local function add(group, key, desc)
       local b = by_combo[key]
       if not b then
          wezterm.log_warn('[keymap-help] no binding for described key: ' .. key)
          return
       end
       seen[key] = true
-      local id = ''
-      if not key:find(' ') then
-         table.insert(runnable, b.action)
-         id = tostring(#runnable)
-      end
-      table.insert(choices, { id = id, label = label(section, key, desc or action_name(b.action), nil) })
+      table.insert(group[2], { key, desc or action_name(b.action) })
    end
 
    for _, section in ipairs(SECTIONS) do
+      local group = { section[1], {} }
       for _, entry in ipairs(section[2]) do
-         add(section[1], entry[1], entry[2])
+         add(group, entry[1], entry[2])
       end
+      table.insert(groups, group)
    end
 
    -- Bindings without a description (e.g. newly added ones) still show up
@@ -167,35 +179,36 @@ local function build()
       end
    end
    table.sort(rest)
+   local other = { '其他', {} }
    for _, key in ipairs(rest) do
-      add('其他', key, nil)
+      add(other, key, nil)
    end
+   table.insert(groups, other)
+   table.insert(groups, { '滑鼠', { { 'Ctrl+左鍵', '開啟游標下連結' } } })
 
-   table.insert(choices, {
-      id = '',
-      label = label('滑鼠', 'Ctrl+左鍵', '開啟游標下連結', nil),
-   })
-   return choices, runnable
+   local choices = {}
+   for _, group in ipairs(groups) do
+      local cells = group[2]
+      for i = 1, #cells, COLUMNS do
+         table.insert(choices, { id = tostring(#choices + 1), label = label(group[1], { table.unpack(cells, i, math.min(i + COLUMNS - 1, #cells)) }) })
+      end
+   end
+   return choices
 end
 
 ---KeyAssignment that opens the cheat sheet
 M.show = wezterm.action_callback(function(window, pane)
-   local choices, runnable = build()
    window:perform_action(
       act.InputSelector({
-         title = 'Keybindings  (SUPER = ' .. SUPER .. ', SUPER_REV = ' .. SUPER_REV:gsub('|', '+') .. ', Enter 執行)',
-         choices = choices,
+         title = 'Keybindings  (SUPER = ' .. SUPER .. ', SUPER_REV = ' .. SUPER_REV:gsub('|', '+') .. ')',
+         choices = build(),
          fuzzy = true,
          fuzzy_description = '搜尋快捷鍵: ',
-         action = wezterm.action_callback(function(win, p, id)
-            local action = id and runnable[tonumber(id)]
-            if action then
-               win:perform_action(action, p)
-            end
-         end),
+         action = wezterm.action_callback(function() end),
       }),
       pane
    )
 end)
+
 
 return M

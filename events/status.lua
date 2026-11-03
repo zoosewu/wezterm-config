@@ -18,8 +18,7 @@ local append = segment.append
 
 local M = {}
 
-local GLYPH_SCIRCLE_LEFT = nf.ple_left_half_circle_thick
-local GLYPH_SCIRCLE_RIGHT = nf.ple_right_half_circle_thick
+local GLYPH_BLOCK_SEPARATOR = '│'
 local GLYPH_KEY_TABLE = nf.md_table_key
 local GLYPH_KEY = nf.md_key
 local GLYPH_WORKSPACE = nf.md_layers_triple
@@ -44,9 +43,9 @@ local BATTERY_ICONS = {
 local DIM = 'rgba(0, 0, 0, 0.4)'
 -- stylua: ignore
 local COLORS = {
-   keytable  = { fill = { bg = '#fab387', fg = '#1c1b19' }, edge = { bg = DIM, fg = '#fab387' } },
-   workspace = { fill = { bg = '#cba6f7', fg = '#1c1b19' }, edge = { bg = DIM, fg = '#cba6f7' } },
-   pane      = { fill = { bg = '#a6e3a1', fg = '#1c1b19' }, edge = { bg = DIM, fg = '#a6e3a1' } },
+   keytable  = { bg = '#fab387', fg = '#1c1b19' },
+   workspace = { bg = '#cba6f7', fg = '#1c1b19' },
+   pane      = { bg = '#a6e3a1', fg = '#1c1b19' },
    date      = { fg = '#fab387', bg = DIM },
    battery   = { fg = '#f9e2af', bg = DIM },
    separator = { fg = '#74c7ec', bg = DIM },
@@ -91,15 +90,20 @@ local function battery()
    return text, icon
 end
 
+---Flat colored block; blocks after the first are preceded by a straight separator line
 ---@param items table[]
----@param colors table { fill, edge }
+---@param colors table { bg, fg }
 ---@param icon string
 ---@param text string
-local function pill(items, colors, icon, text)
-   append(items, GLYPH_SCIRCLE_LEFT, colors.edge, true)
-   append(items, icon, colors.fill, true)
-   append(items, text, colors.fill, true)
-   append(items, GLYPH_SCIRCLE_RIGHT, colors.edge, true)
+local function block(items, colors, icon, text)
+   local lead = ' '
+   if #items > 0 then
+      -- the separator cell already pads the block's left side
+      append(items, GLYPH_BLOCK_SEPARATOR, { fg = colors.fg, bg = colors.bg })
+      lead = ''
+   end
+   -- icons are drawn wider than their cell, hence two spaces after them
+   append(items, lead .. icon .. '  ' .. text .. ' ', colors, true)
 end
 
 ---@param window any GuiWindow
@@ -109,17 +113,17 @@ local function left_status(window, pane)
    local items = {}
    local key_table = window:active_key_table()
    if window:leader_is_active() then
-      pill(items, COLORS.keytable, GLYPH_KEY, ' ')
+      block(items, COLORS.keytable, GLYPH_KEY, 'LEADER')
    elseif key_table then
-      pill(items, COLORS.keytable, GLYPH_KEY_TABLE, ' ' .. key_table:upper())
+      block(items, COLORS.keytable, GLYPH_KEY_TABLE, key_table:upper())
    end
 
    local workspace = wezterm.mux.get_active_workspace()
-   pill(items, COLORS.workspace, ' ' .. GLYPH_WORKSPACE, ' ' .. (workspace ~= '' and workspace or 'default'))
+   block(items, COLORS.workspace, GLYPH_WORKSPACE, workspace ~= '' and workspace or 'default')
 
    local process = process_name.get(pane)
    if process ~= '' then
-      pill(items, COLORS.pane, ' ' .. GLYPH_PANE, ' ' .. process)
+      block(items, COLORS.pane, GLYPH_PANE, process)
    end
    return wezterm.format(items)
 end

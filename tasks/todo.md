@@ -99,3 +99,11 @@
 ### Review
 - headless 44/44；突變測試（移除 dirty 檢查）→ FAIL，已還原
 - GUI 實測：落後 1 commit 的暫存 clone 當 config 目錄 → 啟動約 4 秒後 `updated 1 commit(s) from origin/main`，檔案更新為 v2，config 自動重新求值
+
+## 10. UI 調整
+- [x] 快捷鍵速查（SUPER+F1）改為每行兩組（同 section），寬度不足時以「…」截斷；移除 Enter 執行（一行兩組無法判斷要執行哪個）
+- [x] 左側狀態列改為填滿高度的平面色塊，以直線 `│` 分隔（原本是半圓膠囊）；顏色與 icon 不變
+
+### Review
+- headless 48/48；GUI 截圖確認兩欄對齊（含中文）、狀態列色塊與分隔線正常
+- 備註：左側狀態列原本掛在不存在的 `update-left-status` event，從未顯示；d70fc52 合併進 `update-status` 後才出現
