@@ -16,7 +16,8 @@ local RESERVED_W = 24
 local RESERVED_H = 130
 
 ---Return `width`/`height` (in cells) and `position` for `mux.spawn_window`,
----or nil when screen info is unavailable.
+---or nil when screen info is unavailable. Needs a running GUI: calling it while the
+---config is evaluated at startup (e.g. for `initial_cols`) blocks the GUI forever.
 ---@param font_size number
 ---@return { width: integer, height: integer, position: table }|nil
 function M.for_active_screen(font_size)

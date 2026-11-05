@@ -84,6 +84,15 @@ do
    eq('process-name.clean windows', process_name.clean('C:\\Program Files\\PowerShell\\7\\pwsh.exe'), 'pwsh')
    eq('process-name.clean posix', process_name.clean('/usr/bin/fish'), 'fish')
    eq('process-name.clean nil', process_name.clean(nil), '')
+
+   -- mux-domain panes report no process: fall back to the title
+   local function mux_pane(id, title)
+      return { pane_id = function() return id end, get_foreground_process_name = function() return nil end,
+         get_title = function() return title end }
+   end
+   eq('process-name.get title fallback', process_name.get(mux_pane(9001, 'pwsh.exe')), 'pwsh')
+   eq('process-name.get admin title', process_name.get(mux_pane(9002, 'Administrator: C:\\Program Files\\PowerShell\\7\\pwsh.exe')), 'pwsh')
+   eq('process-name.get title with args', process_name.get(mux_pane(9003, 'vim notes.md')), 'vim')
 end
 
 -- ------------------------------------------------------------ utils.segment
@@ -140,6 +149,27 @@ do
    eq('state-file.read roundtrip', back and back[1].title, '中文')
    eq('state-file.read missing', state_file.read('missing.json'), nil)
    os.remove(state_file.path('t.json'))
+end
+
+-- ------------------------------------------------------------ utils.session
+do
+   local session = require('utils.session')
+   local unix = require('config.domains').unix_domains[1]
+   local args = session.spawn_args({ cwd = 'C:/x', domain = 'local' })
+   eq('session local domain -> default', args.domain == nil and args.cwd, 'C:/x')
+   if unix then
+      -- restored inside the mux server, where the unix domain is the local one
+      args = session.spawn_args({ cwd = 'C:/x', domain = unix.name })
+      eq('session unix domain -> default', args.domain == nil and args.cwd, 'C:/x')
+   end
+   -- other domains go through wezterm.mux, which does not exist headless
+
+   local local_tabs, gui_tabs = session.partition({
+      { domain = 'local' }, { domain = 'wsl:ubuntu-fish' }, {}, { domain = unix and unix.name or 'local' },
+      { domain = 'ssh:wsl' },
+   })
+   eq('session.partition local tabs', #local_tabs, 3)
+   eq('session.partition gui tabs keep order', gui_tabs[1].domain .. ',' .. gui_tabs[2].domain, 'wsl:ubuntu-fish,ssh:wsl')
 end
 
 -- ------------------------------------------- state never lives in the repo

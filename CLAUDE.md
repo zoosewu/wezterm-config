@@ -15,13 +15,13 @@ wezterm.lua            # 主入口，以 Config:init():append() 鏈式組裝所�
 config/
   appearance.lua       # 外觀（主題、背景透明度、front_end）
   bindings.lua         # 全部快捷鍵定義（keys / key_tables / mouse_bindings）
-  domains.lua          # SSH / WSL domain 設定
+  domains.lua          # SSH / WSL / unix domain 設定（PERSISTENT_SESSIONS：GUI 連到背景 mux server，關窗後程序持續執行）
   fonts.lua            # 字型設定
   general.lua          # 一般設定（滾動行數、游標等）
   init.lua             # Config class（append 合併邏輯）
   launch.lua           # Launch menu 偏好 shell
 events/
-  gui-startup.lua      # 唯一的 gui-startup handler：spawn（geometry）→ maximize → session restore → 執行 deferred 工作
+  gui-startup.lua      # 啟動流程：gui-startup（一般模式 spawn + 還原）/ mux-startup（server 還原本機分頁，WSL/SSH 交給 GUI）/ gui-attached → maximize + deferred 工作
   new-tab-button.lua   # 新分頁 + 按鈕
   status.lua           # 左右狀態列（單一 update-status：keytable / workspace / 程序；日期 / CWD / 電池），TTL 快取、未變不重送
   tab-title.lua        # Tab 標題：純 render function + memo（unseen 通知、WSL/Admin 偵測、自訂標題存於 tab:set_title）
@@ -33,7 +33,7 @@ utils/
   health-check.lua     # 啟動自我診斷（F12 Debug Overlay 查看）
   keymap-help.lua      # 快捷鍵速查（SUPER+F1），清單由 bindings.lua 自動產生，中文說明在此維護
   platform.lua         # 平台偵測（is_mac / is_win / is_linux）與快捷鍵 modifier（mods.SUPER / SUPER_REV）
-  process-name.lua     # pane 前景程序名稱（優先用 format-tab-title 拿到的快取值，避免 process snapshot）
+  process-name.lua     # pane 前景程序名稱（優先用 format-tab-title 拿到的快取值，避免 process snapshot；mux pane 無程序資訊時改用標題）
   scratchpad.lua       # 快速筆記 pane（per-tab 底部 25% 浮動）
   segment.lua          # 產生 wezterm.format FormatItem 的純函式
   startup.lua          # 啟動後背景工作（defer / run_deferred），不阻塞第一個視窗
@@ -59,6 +59,7 @@ tests/
 1. **以程式碼品質為優先**：發現 shallow module、重複邏輯或 bug 時直接重構，不必保留上游原貌。
 2. **Lua state 生命週期**：每次 config reload 都會換掉 Lua state，module-local 表會清空，`wezterm.on` handler 也只屬於當次的 state。需要跨 reload 保留的狀態一律使用 `utils/window-state.lua`（per-window/per-tab）或 WezTerm 自身（例如 `tab:set_title()`）。注意：`wezterm.GLOBAL` 的巢狀值讀回來是 `Value` userdata（不能做算術、和 number 比較永遠不相等），指定 `nil` 也刪不掉 key；WezTerm 沒有 `window-closed` event。
 3. **新增模組**：設定類模組透過 `wezterm.lua` 的 `:append(require('config.xxx'))` 加入；事件 / 工具模組放在 `events/`、`utils/`，並在 `wezterm.lua` 呼叫 `setup()`。
+4. **啟動事件（20240203 實測）**：`wezterm connect` 不觸發 `gui-startup`；一般模式不觸發 `gui-attached`；`mux-startup` 只在 mux server 觸發。從 GUI 看，server 內所有 pane 的 domain 都是 `unix`、沒有 foreground process name。config 求值時不可呼叫 `wezterm.gui.screens()`（啟動時會卡死 GUI）。
 
 ---
 
@@ -73,6 +74,7 @@ wezterm --config-file tests/run.lua ls-fonts --text a 2>&1 | grep "\[test\]"
 - 最後一行應為 `[test] N/N passed`；有失敗時會出現 `FAIL` 並觸發 config error。
 - 新增純邏輯或修 bug 時，在 `tests/run.lua` 補對應案例（透過模組的公開 interface 測，不要測私有函式）。
 - 需要 GUI 的行為（reload、override、spawn）測試時：用包裝 config 指向本 repo、`WEZTERM_STATE_DIR` 指向暫存目錄，且 **log 不可寫進 config 目錄**（WezTerm 會監看並觸發 reload）。
+- 包裝 config **必須覆寫 `unix_domains` 的 `socket_path`**（路徑 ≤ 108 字元），否則會接到使用者正在用的 mux server；用 `WEZTERM_CONFIG_FILE` 指定包裝 config，背景啟動的 server 才會讀到同一份。測完記得關掉測試用的 `wezterm-mux-server`。
 
 ---
 

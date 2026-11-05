@@ -45,16 +45,26 @@ function M.remember(pane_id, raw_name)
    return name
 end
 
----Cleaned foreground process name of a live Pane object
+---Cleaned foreground process name of a live Pane object. Panes in a mux domain (persistent
+---sessions) report no process, so their title stands in: "pwsh.exe",
+---"Administrator: C:\...\pwsh.exe" and "vim notes.md" become pwsh / pwsh / vim.
 ---@param pane any WezTerm Pane
 ---@return string
 function M.get(pane)
    local id = pane:pane_id()
    local hit = seen[id]
+   local name
    if hit and os.time() - hit.at < FRESH_SECONDS then
-      return hit.name
+      name = hit.name
+   else
+      name = M.remember(id, pane:get_foreground_process_name())
    end
-   return M.remember(id, pane:get_foreground_process_name())
+   if name == '' then
+      local title = (pane:get_title() or ''):gsub('^.*: ', '')
+      -- a whole executable path may contain spaces ("Program Files"); otherwise "cmd args"
+      name = M.clean(title:match('%.exe$') and title or title:match('^%S*'))
+   end
+   return name
 end
 
 return M

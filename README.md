@@ -77,6 +77,19 @@
   >
   > bash / zsh / fish 通常已內建 OSC 7 支援，無須額外設定。
 
+- [**Persistent Sessions**](./config/domains.lua)
+
+  WezTerm 視窗連到背景的 mux server（unix domain），**關掉視窗後裡面的程式繼續執行**
+  （build、server、SSH、vim…），下次開 WezTerm 會直接接回原本的分頁與捲動紀錄。
+  第一次啟動時 server 會自動在背景啟動（約 3 秒，期間顯示 WezTerm 的 `Connecting...` 視窗）。
+
+  - 只有本機（Windows / macOS / Linux 原生）分頁會保留；WSL / SSH 分頁屬於視窗本身，關掉即結束
+  - server 重新啟動（例如重開機）後才會還原儲存的 session（<kbd>SUPER_REV</kbd>+<kbd>s</kbd>）：
+    本機分頁由 server 還原，WSL / SSH 分頁由接上的視窗還原
+  - 完全結束所有程式：關閉 server（Windows：`taskkill /IM wezterm-mux-server.exe /F`；
+    macOS / Linux：`pkill wezterm-mux-server`）。修改 shell 等開新分頁相關設定後若未生效，也請重啟 server
+  - 不需要時把 `config/domains.lua` 的 `PERSISTENT_SESSIONS` 改成 `false`，回到一般模式
+
 - [**Auto Update**](./utils/updater.lua)
 
   若 config 目錄是 git clone，WezTerm 啟動後會在背景 `git fetch` 更新來源（最多每 6 小時一次），
@@ -405,6 +418,8 @@ Most of the key bindings revolve around a <kbd>SUPER</kbd> and <kbd>SUPER_REV</k
 | --------------------------------- | --------------------------------------------- |
 | <kbd>SUPER_REV</kbd>+<kbd>s</kbd> | Save Session <sub>(records each tab's CWD, domain and custom title)</sub> |
 
+> 啟用 [Persistent Sessions](#features) 時，session 只在 mux server 啟動時還原（平常重開視窗會直接接回仍在執行的分頁）。
+>
 > Session 與 GPU 快取存在 config 目錄以外（Windows：`%LOCALAPPDATA%\wezterm-config`），避免寫檔觸發 config reload；可用環境變數 `WEZTERM_STATE_DIR` 覆寫位置。
 
 &nbsp;

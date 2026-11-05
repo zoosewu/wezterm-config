@@ -107,3 +107,23 @@
 ### Review
 - headless 48/48；GUI 截圖確認兩欄對齊（含中文）、狀態列色塊與分隔線正常
 - 備註：左側狀態列原本掛在不存在的 `update-left-status` event，從未顯示；d70fc52 合併進 `update-status` 後才出現
+
+## 11. Unix domain（GUI 關閉後程序持續執行）
+實測（20240203）：connect 模式不觸發 gui-startup；server 觸發 mux-startup、GUI 觸發 gui-attached；
+GUI 預設 domain 變成 unix；GUI 開的 WSL 分頁屬於 GUI 本地（關閉即消失）；unix pane 的 foreground process name 為 nil、cwd 正常；
+socket 路徑上限 108 字元。
+- [x] domains.lua：`unix_domains = { { name = 'unix' } }` + `default_gui_startup_args = { 'connect', 'unix' }`，可用開關停用
+- [x] gui-startup.lua：gui-startup（非 mux 模式）只負責 spawn；mux-startup（server 首次啟動）還原 session；gui-attached（兩種模式）maximize + run_deferred
+- [x] 防閃爍：實測 connect 模式的終端機視窗直接以全螢幕大小出現，不需處理（小視窗是 WezTerm 的 Connecting... 進度視窗）；在 config 求值時呼叫 gui.screens() 會卡死 GUI，已放棄 initial_cols 方案
+- [x] session：unix domain 視同本地 domain；WSL / SSH 分頁經 `session-pending.json` 交給 GUI 還原（server 端 WSL pane 在 GUI 看來是 unix，分割 / icon / 儲存都會錯）
+- [x] gui-attached 在一般模式不觸發 → 收尾邏輯改為 gui-startup 結尾與 gui-attached 共用（只執行一次）
+- [x] process-name：mux pane 沒有程序名稱，改用 pane 標題推估（狀態列綠色區塊）
+- [x] tests：session.spawn_args 對 unix domain 的對應
+- [x] GUI 實測：關閉重開保留分頁、server 首次啟動還原 session、非 mux 模式行為不變、無閃爍
+- [x] 文件：README、CLAUDE.md（GUI 測試必須覆寫 socket_path，否則會接到真正的 server）
+
+### Review
+- headless 55/55（新增 session.spawn_args / partition、process-name 標題 fallback）
+- GUI（獨立 socket）：關閉 GUI 後 server 存活、重開接回原分頁；server 首次啟動還原 3 分頁（2 本機在 server、WSL 交給 GUI，domain 正確，pending 檔用完即刪，作用中分頁回到第 1 個）；再次接回不重複還原
+- 一般模式（PERSISTENT_SESSIONS=false 等效）：gui-startup 還原 3 分頁、背景工作執行、不啟動 server
+- 已知限制：server 首次啟動約 3 秒顯示 Connecting... 視窗；WSL / SSH 分頁不持久
