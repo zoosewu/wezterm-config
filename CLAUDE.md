@@ -30,6 +30,7 @@ utils/
   cwd.lua              # pane 工作目錄：get / for_domain（依目標 domain 轉換）/ shorten / is_wsl_domain
   font-installer.lua   # 缺少字型時先用內建 fallback，背景自動下載至 state 目錄的 fonts/ 後 reload
   gpu-adapter.lua      # WebGPU 最佳 GPU+API 自動選擇器（磁碟快取加速啟動）
+  gsudo.lua            # Windows 管理員權限：gsudo 路徑偵測（launch menu「PowerShell (Admin)」）、缺少時背景以 scoop / winget 自動安裝
   health-check.lua     # 啟動自我診斷（F12 Debug Overlay 查看）
   keymap-help.lua      # 快捷鍵速查（SUPER+F1），清單由 bindings.lua 自動產生，中文說明在此維護
   platform.lua         # 平台偵測（is_mac / is_win / is_linux）與快捷鍵 modifier（mods.SUPER / SUPER_REV）

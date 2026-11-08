@@ -127,3 +127,15 @@ socket 路徑上限 108 字元。
 - GUI（獨立 socket）：關閉 GUI 後 server 存活、重開接回原分頁；server 首次啟動還原 3 分頁（2 本機在 server、WSL 交給 GUI，domain 正確，pending 檔用完即刪，作用中分頁回到第 1 個）；再次接回不重複還原
 - 一般模式（PERSISTENT_SESSIONS=false 等效）：gui-startup 還原 3 分頁、背景工作執行、不啟動 server
 - 已知限制：server 首次啟動約 3 秒顯示 Connecting... 視窗；WSL / SSH 分頁不持久
+
+## 12. 管理員指令（gsudo）
+- [x] `utils/gsudo.lua`：`path()` 以 io.open 偵測（scoop `apps/gsudo/current`、Program Files、PATH；執行中的 WezTerm PATH 不會更新）
+- [x] 缺少時背景安裝：scoop（免 UAC）優先，否則 winget（MSI，一次 UAC）；失敗 24 小時內不重試；成功後 reload + 通知
+- [x] Launch menu 加入「PowerShell (Admin)」（gsudo 絕對路徑），只在找得到 gsudo 時出現
+- [x] tests：path 格式、admin 選單與 gsudo 一致（共 57 項）
+
+### Review
+- GUI 實測（獨立 socket）：未安裝 → 啟動後以 scoop 安裝成功、通知、重新載入；headless 之後偵測到 gsudo 並出現 admin 選單
+- 第一版誤判失敗：scoop 不建 gsudo shim（裝在 apps/gsudo/current 並加入 PATH），已修正搜尋路徑；失敗訊息改含 stdout（scoop 錯誤輸出在 stdout）
+- `where sudo` 先找到 Windows 內建 sudo（停用中），所以文件只寫 `gsudo`
+- 待使用者實測：「PowerShell (Admin)」分頁的 UAC 與提升（需要人按 UAC）

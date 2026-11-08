@@ -183,6 +183,19 @@ do
    eq('font-installer.FONT_DIR outside repo', outside_repo(require('utils.font-installer').FONT_DIR), true)
 end
 
+-- ------------------------------------------------------------- utils.gsudo
+do
+   local gsudo = require('utils.gsudo').path()
+   local admin_entry = false
+   for _, entry in ipairs(require('config.launch').launch_menu) do
+      if entry.label == 'PowerShell (Admin)' then
+         admin_entry = entry.args[1] == gsudo
+      end
+   end
+   eq('gsudo.path is an absolute gsudo.exe or nil', gsudo == nil or gsudo:match('^%a:/.*/gsudo%.exe$') ~= nil, true)
+   eq('launch menu admin entry iff gsudo found', admin_entry, gsudo ~= nil)
+end
+
 -- ---------------------------------------------------------- utils.platform
 do
    local platform = require('utils.platform')

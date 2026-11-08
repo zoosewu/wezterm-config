@@ -72,6 +72,12 @@ if platform.is_win then
    if git_bash then
       table.insert(options.launch_menu, { label = 'Git Bash', args = { git_bash } })
    end
+
+   -- elevated tab; appears once gsudo is installed (see utils/gsudo.lua)
+   local gsudo = require('utils.gsudo').path()
+   if gsudo then
+      table.insert(options.launch_menu, 2, { label = 'PowerShell (Admin)', args = { gsudo, 'pwsh', '-NoLogo' } })
+   end
 elseif platform.is_mac then
    options.default_prog = { '/bin/zsh', '-l' }
    options.launch_menu = {

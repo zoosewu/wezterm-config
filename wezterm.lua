@@ -21,6 +21,7 @@ local _t = timing.now(); require('events.tab-title').setup({ hide_active_tab_uns
 local _t = timing.now(); require('events.new-tab-button').setup(); timing.log('new-tab-button.setup()', _t)
 local _t = timing.now(); require('events.gui-startup').setup(); timing.log('gui-startup.setup()', _t)
 local _t = timing.now(); require('utils.font-installer').setup(); timing.log('font-installer.setup()', _t)
+local _t = timing.now(); require('utils.gsudo').setup({ auto_install = true }); timing.log('gsudo.setup()', _t)
 -- Auto update: pulls from the clone's upstream by default. To follow your own repo:
 --   repo = 'git@github.com:<you>/wezterm-config.git', branch = 'master'
 -- enabled = false turns off the startup check (F2 "Config: 檢查更新" still works)

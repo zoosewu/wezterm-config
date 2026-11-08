@@ -90,6 +90,19 @@
     macOS / Linux：`pkill wezterm-mux-server`）。修改 shell 等開新分頁相關設定後若未生效，也請重啟 server
   - 不需要時把 `config/domains.lua` 的 `PERSISTENT_SESSIONS` 改成 `false`，回到一般模式
 
+- [**Admin Commands (Windows)**](./utils/gsudo.lua)
+
+  透過 [gsudo](https://github.com/gerardog/gsudo) 只對需要的指令或分頁提升權限（不必以系統管理員身分開整個 WezTerm）：
+
+  - `gsudo <指令>`：在目前分頁以管理員執行一個指令（會跳 UAC），可直接用 PowerShell cmdlet
+  - `gsudo`：把目前的 shell 提升為管理員，`exit` 回到一般權限
+  - Launch Menu（<kbd>F3</kbd> 或右鍵 `+`）→ `PowerShell (Admin)`：開一個管理員分頁
+
+  找不到 gsudo 時會在啟動後背景自動安裝（有 scoop 用 scoop，免 UAC；否則用 winget，會跳一次 UAC），
+  失敗 24 小時內不重試。剛裝好時，已開啟的 shell 還沒有新的 PATH，`gsudo` 指令要在 WezTerm
+  與 mux server 重啟後才找得到（`PowerShell (Admin)` 使用絕對路徑，立即可用）。
+  不想自動安裝：`wezterm.lua` 裡改為 `gsudo.setup({ auto_install = false })`。
+
 - [**Auto Update**](./utils/updater.lua)
 
   若 config 目錄是 git clone，WezTerm 啟動後會在背景 `git fetch` 更新來源（最多每 6 小時一次），
